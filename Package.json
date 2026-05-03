@@ -1,0 +1,11 @@
+{
+  "name": "message-in-a-bottle",
+  "version": "1.0.0",
+  "dependencies": {
+    "express": "^4.18.1",
+    "sqlite3": "^5.0.2"
+  },
+  "scripts": {
+    "start": "node server.js"
+  }
+}

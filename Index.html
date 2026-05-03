@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Message in a Bottle</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <style>
+    body {
+      background-color: #f7f7f7;
+      font-family: Arial, sans-serif;
+    }
+    .container {
+      max-width: 400px;
+      margin: 40px auto;
+      padding: 20px;
+      background-color: #fff;
+      border: 1px solid #ddd;
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1 class="text-center text-3xl mb-4">Message in a Bottle</h1>
+    <form id="message-form">
+      <textarea id="message" placeholder="Tulis pesan anonimmu..." maxlength="300" class="w-full p-2 mb-4 border border-gray-400 rounded"></textarea>
+      <button id="throw-btn" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">Lempar ke Laut</button>
+    </form>
+    <button id="find-btn" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded mt-4">Cari Botol</button>
+    <p id="message-display" class="mt-4"></p>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
