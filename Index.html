@@ -53,6 +53,27 @@
     textarea::-webkit-scrollbar { width: 6px; }
     textarea::-webkit-scrollbar-track { background: transparent; }
     textarea::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.3); border-radius: 3px; }
+
+    /* === SPOILER / SENSOR (black bar, reveal on hover/click) === */
+    .spoiler {
+      background-color: #000;
+      color: transparent;
+      cursor: pointer;
+      transition: color 0.3s ease;
+      border-radius: 3px;
+      padding: 0 4px;
+      user-select: none;
+    }
+    .spoiler:hover,
+    .spoiler:focus,
+    .spoiler.revealed {
+      color: #fff;
+      background-color: #222;
+    }
+    /* Transisi untuk strikethrough agar smooth */
+    s, del {
+      text-decoration-thickness: 1.5px;
+    }
   </style>
 </head>
 <body class="min-h-screen bg-gradient-to-br from-slate-900 via-cyan-800 to-amber-300 font-sans flex items-center justify-center p-4 md:p-8 relative overflow-x-hidden">
@@ -89,9 +110,9 @@
 
         <!-- Message Display (disembunyikan default, muncul setelah fetch berhasil) -->
         <div id="message-display-wrapper" class="hidden w-full">
-          <p id="message-display" class="text-white text-2xl md:text-3xl font-light leading-relaxed italic">
-            <!-- isi dari API -->
-          </p>
+          <div id="message-display" class="text-white text-2xl md:text-3xl font-light leading-relaxed italic">
+            <!-- isi dari API — diisi via DOM API (aman dari XSS) -->
+          </div>
         </div>
 
         <!-- Empty State (database kosong) -->
@@ -142,22 +163,36 @@
       <!-- Form -->
       <form id="message-form" class="space-y-4">
         <div class="relative">
+
+          <!-- === FORMATTING TOOLBAR (Markdown-style helpers) === -->
+          <div class="flex gap-2 mb-2 flex-wrap">
+            <button type="button" class="toolbar-btn px-3 py-1.5 bg-white/10 hover:bg-white/20 border border-white/10 rounded-lg text-white/70 hover:text-white text-sm font-medium transition-all duration-200 active:scale-90" data-tag="bold" title="Bold (**teks**)">
+              <strong>B</strong>
+            </button>
+            <button type="button" class="toolbar-btn px-3 py-1.5 bg-white/10 hover:bg-white/20 border border-white/10 rounded-lg text-white/70 hover:text-white text-sm font-medium transition-all duration-200 active:scale-90" data-tag="strike" title="Strikethrough (~~teks~~)">
+              <span class="line-through">S</span>
+            </button>
+            <button type="button" class="toolbar-btn px-3 py-1.5 bg-white/10 hover:bg-white/20 border border-white/10 rounded-lg text-white/70 hover:text-white text-sm font-medium transition-all duration-200 active:scale-90" data-tag="sensor" title="Spoiler/Sensor (||teks||)">
+              🕵️
+            </button>
+            <span class="text-white/20 text-xs self-center ml-auto">Gunakan **bold**, ~~coret~~, ||sensor||</span>
+          </div>
+
           <textarea
             id="message-input"
-            maxlength="300"
-            rows="5"
-            placeholder="Tulis pesan anonimmu di sini..."
+            rows="12"
+            placeholder="Tulis cerita atau pemikiranmu... (min. 300 kata)"
             class="w-full bg-white/5 border border-white/10 rounded-2xl p-4 text-white text-base md:text-lg placeholder-white/30 font-light resize-none focus:outline-none focus:border-white/30 focus:ring-1 focus:ring-white/20 transition-all duration-300"
           ></textarea>
-          <!-- Character Counter -->
+          <!-- Word Counter (bukan karakter lagi) -->
           <div class="flex justify-end mt-2 px-1">
-            <span id="char-counter" class="text-white/40 text-sm font-light tracking-wide">0 / 300</span>
+            <span id="word-counter" class="text-white/40 text-sm font-light tracking-wide">0 / 300 kata</span>
           </div>
         </div>
 
         <!-- Tombol Aksi -->
         <div class="flex flex-col sm:flex-row gap-3 pt-2">
-          <button type="submit" id="throw-btn" class="flex-1 px-6 py-3 bg-gradient-to-r from-amber-400 to-orange-400 hover:from-amber-300 hover:to-orange-300 rounded-xl text-slate-900 font-semibold transition-all duration-300 hover:scale-[1.02] active:scale-95 shadow-lg shadow-amber-500/30 flex items-center justify-center gap-2">
+          <button type="submit" id="throw-btn" class="flex-1 px-6 py-3 bg-gradient-to-r from-amber-400 to-orange-400 hover:from-amber-300 hover:to-orange-300 rounded-xl text-slate-900 font-semibold transition-all duration-300 hover:scale-[1.02] active:scale-95 shadow-lg shadow-amber-500/30 flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100" disabled>
             <span>💧</span> Lempar ke Laut
           </button>
           <button type="button" id="cancel-btn" class="flex-1 px-6 py-3 bg-white/10 hover:bg-white/20 backdrop-blur-sm border border-white/10 rounded-xl text-white/80 hover:text-white font-medium transition-all duration-300 hover:scale-[1.02] active:scale-95 flex items-center justify-center gap-2">
@@ -174,6 +209,8 @@
     </div>
   </div>
 
+  <!-- Load config dulu (SATU sumber kebenaran), baru script utama -->
+  <script src="config.js"></script>
   <script src="script.js"></script>
 </body>
 </html>

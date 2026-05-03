@@ -1,5 +1,6 @@
 const express = require('express');
 const sqlite3 = require('sqlite3').verbose();
+const CONFIG = require('./config.js');
 const app = express();
 const port = 3000;
 
@@ -17,10 +18,28 @@ db.serialize(function () {
   `);
 });
 
+// === Fungsi bantu hitung word count (sama persis logikanya dengan di Frontend) ===
+function countWords(text) {
+  const trimmed = text.trim();
+  if (trimmed === '') return 0;
+  return trimmed.split(/\s+/).length;
+}
+
 app.post('/api/messages', (req, res) => {
   const message = req.body.message;
-  if (!message || message.length > 300) {
-    res.status(400).send({ error: 'Pesan tidak boleh kosong atau lebih dari 300 karakter' });
+
+  // Cek apakah pesan ada
+  if (!message) {
+    res.status(400).send({ error: 'Pesan tidak boleh kosong' });
+    return;
+  }
+
+  // Validasi word count
+  const wordCount = countWords(message);
+  if (wordCount < CONFIG.MIN_WORD_COUNT) {
+    res.status(400).send({
+      error: `Pesan harus minimal ${CONFIG.MIN_WORD_COUNT} kata. Saat ini: ${wordCount} kata.`
+    });
     return;
   }
 
