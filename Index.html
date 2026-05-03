@@ -4,32 +4,174 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Message in a Bottle</title>
-  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'system-ui', 'sans-serif'],
+          },
+        }
+      }
+    }
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <style>
-    body {
-      background-color: #f7f7f7;
-      font-family: Arial, sans-serif;
+    /* Animasi kustom */
+    @keyframes float {
+      0%, 100% { transform: translateY(0px); }
+      50% { transform: translateY(-10px); }
     }
-    .container {
-      max-width: 400px;
-      margin: 40px auto;
-      padding: 20px;
-      background-color: #fff;
-      border: 1px solid #ddd;
-      border-radius: 10px;
-      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    .animate-float {
+      animation: float 3s ease-in-out infinite;
     }
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(20px) scale(0.95); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+    .animate-fade-in-up {
+      animation: fadeInUp 0.5s ease-out forwards;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    .animate-fade-in {
+      animation: fadeIn 0.4s ease-out forwards;
+    }
+    @keyframes pulseSoft {
+      0%, 100% { opacity: 0.6; }
+      50% { opacity: 1; }
+    }
+    .animate-pulse-soft {
+      animation: pulseSoft 1.5s ease-in-out infinite;
+    }
+    /* Scrollbar halus untuk textarea */
+    textarea::-webkit-scrollbar { width: 6px; }
+    textarea::-webkit-scrollbar-track { background: transparent; }
+    textarea::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.3); border-radius: 3px; }
   </style>
 </head>
-<body>
-  <div class="container">
-    <h1 class="text-center text-3xl mb-4">Message in a Bottle</h1>
-    <form id="message-form">
-      <textarea id="message" placeholder="Tulis pesan anonimmu..." maxlength="300" class="w-full p-2 mb-4 border border-gray-400 rounded"></textarea>
-      <button id="throw-btn" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">Lempar ke Laut</button>
-    </form>
-    <button id="find-btn" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded mt-4">Cari Botol</button>
-    <p id="message-display" class="mt-4"></p>
+<body class="min-h-screen bg-gradient-to-br from-slate-900 via-cyan-800 to-amber-300 font-sans flex items-center justify-center p-4 md:p-8 relative overflow-x-hidden">
+
+  <!-- === DECORATIVE ELEMENTS (latar tambahan) === -->
+  <div class="fixed inset-0 pointer-events-none overflow-hidden">
+    <div class="absolute top-10 left-10 w-72 h-72 bg-white/5 rounded-full blur-3xl"></div>
+    <div class="absolute bottom-10 right-10 w-96 h-96 bg-amber-300/10 rounded-full blur-3xl"></div>
+    <div class="absolute top-1/3 right-1/4 w-48 h-48 bg-cyan-400/10 rounded-full blur-2xl"></div>
+  </div>
+
+  <!-- === READING STATE (Tampilan utama) === -->
+  <main id="reading-state" class="relative w-full max-w-lg transition-all duration-500 ease-in-out">
+    <div class="bg-white/10 backdrop-blur-xl border border-white/20 rounded-3xl shadow-2xl shadow-black/20 p-8 md:p-10 text-center animate-fade-in-up">
+
+      <!-- Ikon Botol -->
+      <div class="text-7xl mb-6 animate-float">🧴</div>
+
+      <!-- Judul -->
+      <h1 class="text-white/90 text-xl md:text-2xl font-light tracking-wide mb-6">
+        Message in a Bottle
+      </h1>
+
+      <!-- Divider tipis -->
+      <div class="w-16 h-px bg-white/20 mx-auto mb-6"></div>
+
+      <!-- Area Pesan (loading, empty, atau teks) -->
+      <div id="message-area" class="min-h-[120px] flex items-center justify-center">
+        <!-- Loading State (default tampil saat fetch) -->
+        <p id="loading-text" class="text-white/60 text-base md:text-lg font-light animate-pulse-soft flex items-center gap-2">
+          <span class="inline-block w-2 h-2 bg-white/60 rounded-full animate-ping"></span>
+          Mencari botol di lautan...
+        </p>
+
+        <!-- Message Display (disembunyikan default, muncul setelah fetch berhasil) -->
+        <div id="message-display-wrapper" class="hidden w-full">
+          <p id="message-display" class="text-white text-2xl md:text-3xl font-light leading-relaxed italic">
+            <!-- isi dari API -->
+          </p>
+        </div>
+
+        <!-- Empty State (database kosong) -->
+        <div id="empty-state" class="hidden">
+          <p class="text-white/60 text-lg md:text-xl font-light leading-relaxed">
+            🌊 Lautan masih sepi. Jadilah yang pertama melempar pesan ke ombak.
+          </p>
+        </div>
+
+        <!-- Error State -->
+        <div id="error-state" class="hidden">
+          <p id="error-text" class="text-red-300/80 text-base md:text-lg font-light"></p>
+        </div>
+      </div>
+
+      <!-- Divider tipis -->
+      <div class="w-16 h-px bg-white/20 mx-auto my-6"></div>
+
+      <!-- Tombol Navigasi -->
+      <div class="flex flex-col sm:flex-row gap-3 justify-center">
+        <button id="find-btn" class="px-6 py-3 bg-white/15 hover:bg-white/25 backdrop-blur-sm border border-white/20 rounded-xl text-white font-medium transition-all duration-300 hover:scale-[1.02] active:scale-95 shadow-lg hover:shadow-white/10 flex items-center justify-center gap-2">
+          <span>🔍</span> Temukan Pesan Lain
+        </button>
+        <button id="write-btn" class="px-6 py-3 bg-gradient-to-r from-cyan-400 to-teal-400 hover:from-cyan-300 hover:to-teal-300 rounded-xl text-slate-900 font-semibold transition-all duration-300 hover:scale-[1.02] active:scale-95 shadow-lg shadow-cyan-500/30 flex items-center justify-center gap-2">
+          <span>✍️</span> Tulis Pesan
+        </button>
+      </div>
+
+      <!-- Footer -->
+      <p class="text-white/30 text-xs mt-6 font-light tracking-wide">Kirim & temukan pesan anonim dari lautan</p>
+    </div>
+  </main>
+
+  <!-- === WRITING STATE (Modal) === -->
+  <div id="write-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 hidden transition-all duration-500 ease-in-out">
+    <!-- Overlay -->
+    <div id="modal-overlay" class="absolute inset-0 bg-black/40 backdrop-blur-sm transition-opacity duration-500"></div>
+    <!-- Card Modal -->
+    <div id="modal-card" class="relative bg-white/10 backdrop-blur-2xl border border-white/20 rounded-3xl shadow-2xl shadow-black/30 p-8 md:p-10 w-full max-w-lg scale-95 opacity-0 transition-all duration-500 ease-out">
+      
+      <!-- Ikon & Judul Modal -->
+      <div class="text-center mb-6">
+        <div class="text-5xl mb-4">📜</div>
+        <h2 class="text-white/90 text-xl md:text-2xl font-light">Tulis Pesan Rahasia</h2>
+        <p class="text-white/40 text-sm font-light mt-1">Apa yang ingin kau sampaikan pada lautan?</p>
+      </div>
+
+      <!-- Form -->
+      <form id="message-form" class="space-y-4">
+        <div class="relative">
+          <textarea
+            id="message-input"
+            maxlength="300"
+            rows="5"
+            placeholder="Tulis pesan anonimmu di sini..."
+            class="w-full bg-white/5 border border-white/10 rounded-2xl p-4 text-white text-base md:text-lg placeholder-white/30 font-light resize-none focus:outline-none focus:border-white/30 focus:ring-1 focus:ring-white/20 transition-all duration-300"
+          ></textarea>
+          <!-- Character Counter -->
+          <div class="flex justify-end mt-2 px-1">
+            <span id="char-counter" class="text-white/40 text-sm font-light tracking-wide">0 / 300</span>
+          </div>
+        </div>
+
+        <!-- Tombol Aksi -->
+        <div class="flex flex-col sm:flex-row gap-3 pt-2">
+          <button type="submit" id="throw-btn" class="flex-1 px-6 py-3 bg-gradient-to-r from-amber-400 to-orange-400 hover:from-amber-300 hover:to-orange-300 rounded-xl text-slate-900 font-semibold transition-all duration-300 hover:scale-[1.02] active:scale-95 shadow-lg shadow-amber-500/30 flex items-center justify-center gap-2">
+            <span>💧</span> Lempar ke Laut
+          </button>
+          <button type="button" id="cancel-btn" class="flex-1 px-6 py-3 bg-white/10 hover:bg-white/20 backdrop-blur-sm border border-white/10 rounded-xl text-white/80 hover:text-white font-medium transition-all duration-300 hover:scale-[1.02] active:scale-95 flex items-center justify-center gap-2">
+            <span>↩️</span> Batal / Kembali
+          </button>
+        </div>
+      </form>
+
+      <!-- Notifikasi sukses (setelah POST) -->
+      <div id="success-notification" class="hidden mt-4 p-3 bg-emerald-400/20 backdrop-blur-sm border border-emerald-400/30 rounded-xl text-emerald-300 text-sm text-center font-light animate-fade-in">
+        ✅ Pesan berhasil dilempar ke laut!
+      </div>
+
+    </div>
   </div>
 
   <script src="script.js"></script>
