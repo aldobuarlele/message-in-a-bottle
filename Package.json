@@ -1,13 +1,24 @@
 {
   "name": "message-in-a-bottle",
-  "version": "1.0.0",
+  "version": "1.1.0",
+  "description": "Kirim dan temukan pesan anonim dari lautan 🌊",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "start:dev": "NODE_ENV=development node server.js",
+    "start:prod": "NODE_ENV=production node server.js",
+    "start:pm2": "pm2 start ecosystem.config.js",
+    "test": "echo \"No tests configured yet\" && exit 0"
+  },
+  "keywords": ["anonymous", "message", "bottle", "secret", "ocean"],
+  "license": "MIT",
   "dependencies": {
+    "dotenv": "^16.4.7",
     "express": "^4.18.1",
     "express-rate-limit": "^8.4.1",
     "helmet": "^8.1.0",
+    "pino": "^9.6.0",
+    "pino-pretty": "^14.0.0",
     "sqlite3": "^5.0.2"
-  },
-  "scripts": {
-    "start": "node server.js"
   }
 }

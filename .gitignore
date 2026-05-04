@@ -1,5 +1,7 @@
 node_modules/
-messages.db
-messages.db-shm
-messages.db-wal
-.env
+.env*
+logs/
+*.db
+*.db-wal
+*.db-shm
+.DS_Store

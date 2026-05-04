@@ -1,12 +1,46 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="id">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Message in a Bottle</title>
-  
-  <!-- === CUSTOM FAVICON (Inline SVG — Botol Kaca) === -->
+
+  <!-- === PRIMARY META === -->
+  <title>Message in a Bottle — Kirim & Temukan Pesan Rahasia</title>
+  <meta name="description" content="Kirim dan temukan pesan anonim dari lautan. Tulis rahasiamu, lempar ke laut, dan siapa tahu seseorang menemukannya.">
+  <meta name="keywords" content="anonymous message, message in a bottle, rahasia, pesan anonim, kirim pesan rahasia">
+  <meta name="author" content="Message in a Bottle">
+  <meta name="robots" content="index, follow">
+  <meta name="theme-color" content="#0F172A">
+
+  <!-- === OPEN GRAPH (Facebook, WhatsApp, Discord, Telegram, LinkedIn) === -->
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://message-in-a-bottle.vercel.app"> <!-- TODO: Ganti dengan domain asli -->
+  <meta property="og:title" content="Message in a Bottle — Kirim & Temukan Pesan Rahasia">
+  <meta property="og:description" content="Tulis rahasiamu, lempar ke lautan digital, dan temukan pesan dari orang lain. Anonim dan aman.">
+  <meta property="og:image" content="https://message-in-a-bottle.vercel.app/public/icons/og-image.png"> <!-- TODO: Ganti -->
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:locale" content="id_ID">
+  <meta property="og:site_name" content="Message in a Bottle">
+
+  <!-- === TWITTER CARD === -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Message in a Bottle — Kirim & Temukan Pesan Rahasia">
+  <meta name="twitter:description" content="Tulis rahasiamu, lempar ke lautan digital, dan temukan pesan dari orang lain.">
+  <meta name="twitter:image" content="https://message-in-a-bottle.vercel.app/public/icons/og-image.png"> <!-- TODO: Ganti -->
+
+  <!-- === APPLE / MOBILE === -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Botol Pesan">
+  <link rel="apple-touch-icon" href="/public/icons/apple-touch-icon.png">
+
+  <!-- === WEB APP MANIFEST === -->
+  <link rel="manifest" href="/public/manifest.json">
+
+  <!-- === FAVICON === -->
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0%25' y1='0%25' x2='0%25' y2='100%25'%3E%3Cstop offset='0%25' stop-color='%2306B6D4'/%3E%3Cstop offset='100%25' stop-color='%2314b8a6'/%3E%3C/linearGradient%3E%3C/defs%3E%3Cpath d='M12 2h8l1 6h-2l-1-4h-4l-1 4h-2l1-6z' fill='url(%23g)'/%3E%3Cpath d='M10 8h12l-1 4h-10l-1-4z' fill='url(%23g)'/%3E%3Crect x='9' y='12' width='14' height='16' rx='2' fill='url(%23g)' opacity='0.9'/%3E%3Crect x='11' y='14' width='10' height='10' rx='1' fill='%23fff' opacity='0.25'/%3E%3Crect x='12' y='16' width='8' height='2' rx='0.5' fill='%23fff' opacity='0.15'/%3E%3C/svg%3E">
+  <link rel="icon" type="image/x-icon" href="/favicon.ico">
 
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
@@ -74,27 +108,50 @@
       color: #fff;
       background-color: #222;
     }
-    /* Transisi untuk strikethrough agar smooth */
-    s, del {
-      text-decoration-thickness: 1.5px;
+
+    /* === FOCUS VISIBLE RING (a11y) === */
+    :focus-visible {
+      outline: 2px solid #22d3ee;
+      outline-offset: 2px;
+      border-radius: 4px;
+    }
+
+    /* Skip to content — hidden until focused (a11y) */
+    .skip-link {
+      position: absolute;
+      top: -100%;
+      left: 8px;
+      z-index: 100;
+      padding: 8px 16px;
+      background: #22d3ee;
+      color: #0F172A;
+      border-radius: 0 0 8px 8px;
+      font-weight: 600;
+      transition: top 0.2s;
+    }
+    .skip-link:focus {
+      top: 0;
     }
   </style>
 </head>
 <body class="min-h-screen bg-gradient-to-br from-slate-900 via-cyan-800 to-amber-300 font-sans flex items-center justify-center p-4 md:p-8 relative overflow-x-hidden">
 
-  <!-- === DECORATIVE ELEMENTS (latar tambahan) === -->
-  <div class="fixed inset-0 pointer-events-none overflow-hidden">
+  <!-- === SKIP LINK (a11y — lewati navigasi ke konten utama) === -->
+  <a href="#reading-state" class="skip-link">Lompat ke konten utama</a>
+
+  <!-- === DECORATIVE ELEMENTS === -->
+  <div class="fixed inset-0 pointer-events-none overflow-hidden" aria-hidden="true">
     <div class="absolute top-10 left-10 w-72 h-72 bg-white/5 rounded-full blur-3xl"></div>
     <div class="absolute bottom-10 right-10 w-96 h-96 bg-amber-300/10 rounded-full blur-3xl"></div>
     <div class="absolute top-1/3 right-1/4 w-48 h-48 bg-cyan-400/10 rounded-full blur-2xl"></div>
   </div>
 
   <!-- === READING STATE (Tampilan utama) === -->
-  <main id="reading-state" class="relative w-full max-w-lg transition-all duration-500 ease-in-out">
+  <main id="reading-state" class="relative w-full max-w-lg transition-all duration-500 ease-in-out" role="main" aria-label="Pesan dari dalam botol">
     <div class="bg-white/10 backdrop-blur-xl border border-white/20 rounded-3xl shadow-2xl shadow-black/20 p-8 md:p-10 text-center animate-fade-in-up">
 
       <!-- Ikon Botol -->
-      <div class="text-7xl mb-6 animate-float">🧴</div>
+      <div class="text-7xl mb-6 animate-float" aria-hidden="true">🧴</div>
 
       <!-- Judul -->
       <h1 class="text-white/90 text-xl md:text-2xl font-light tracking-wide mb-6">
@@ -102,46 +159,51 @@
       </h1>
 
       <!-- Divider tipis -->
-      <div class="w-16 h-px bg-white/20 mx-auto mb-6"></div>
+      <div class="w-16 h-px bg-white/20 mx-auto mb-6" aria-hidden="true"></div>
 
       <!-- Area Pesan (loading, empty, atau teks) -->
       <div id="message-area" class="min-h-[120px] flex items-center justify-center">
-        <!-- Loading State (default tampil saat fetch) -->
-        <p id="loading-text" class="text-white/60 text-base md:text-lg font-light animate-pulse-soft flex items-center gap-2">
-          <span class="inline-block w-2 h-2 bg-white/60 rounded-full animate-ping"></span>
+        <!-- Loading State -->
+        <p id="loading-text" class="text-white/60 text-base md:text-lg font-light animate-pulse-soft flex items-center gap-2"
+           role="status" aria-live="polite" aria-label="Mencari pesan di lautan">
+          <span class="inline-block w-2 h-2 bg-white/60 rounded-full animate-ping" aria-hidden="true"></span>
           Mencari botol di lautan...
         </p>
 
-        <!-- Message Display (disembunyikan default, muncul setelah fetch berhasil) -->
+        <!-- Message Display -->
         <div id="message-display-wrapper" class="hidden w-full">
-          <div id="message-display" class="text-white text-2xl md:text-3xl font-light leading-relaxed italic">
-            <!-- isi dari API — diisi via DOM API (aman dari XSS) -->
+          <div id="message-display" class="text-white text-2xl md:text-3xl font-light leading-relaxed italic"
+               role="region" aria-label="Isi pesan yang ditemukan">
           </div>
         </div>
 
-        <!-- Empty State (database kosong) -->
-        <div id="empty-state" class="hidden">
+        <!-- Empty State -->
+        <div id="empty-state" class="hidden" role="status" aria-live="polite">
           <p class="text-white/60 text-lg md:text-xl font-light leading-relaxed">
             🌊 Lautan masih sepi. Jadilah yang pertama melempar pesan ke ombak.
           </p>
         </div>
 
         <!-- Error State -->
-        <div id="error-state" class="hidden">
+        <div id="error-state" class="hidden" role="alert" aria-live="assertive">
           <p id="error-text" class="text-red-300/80 text-base md:text-lg font-light"></p>
         </div>
       </div>
 
       <!-- Divider tipis -->
-      <div class="w-16 h-px bg-white/20 mx-auto my-6"></div>
+      <div class="w-16 h-px bg-white/20 mx-auto my-6" aria-hidden="true"></div>
 
       <!-- Tombol Navigasi -->
       <div class="flex flex-col sm:flex-row gap-3 justify-center">
-        <button id="find-btn" class="px-6 py-3 bg-white/15 hover:bg-white/25 backdrop-blur-sm border border-white/20 rounded-xl text-white font-medium transition-all duration-300 hover:scale-[1.02] active:scale-95 shadow-lg hover:shadow-white/10 flex items-center justify-center gap-2">
-          <span>🔍</span> Temukan Pesan Lain
+        <button id="find-btn"
+                class="px-6 py-3 bg-white/15 hover:bg-white/25 backdrop-blur-sm border border-white/20 rounded-xl text-white font-medium transition-all duration-300 hover:scale-[1.02] active:scale-95 shadow-lg hover:shadow-white/10 flex items-center justify-center gap-2"
+                aria-label="Temukan pesan lain dari lautan secara acak">
+          <span aria-hidden="true">🔍</span> Temukan Pesan Lain
         </button>
-        <button id="write-btn" class="px-6 py-3 bg-gradient-to-r from-cyan-400 to-teal-400 hover:from-cyan-300 hover:to-teal-300 rounded-xl text-slate-900 font-semibold transition-all duration-300 hover:scale-[1.02] active:scale-95 shadow-lg shadow-cyan-500/30 flex items-center justify-center gap-2">
-          <span>✍️</span> Tulis Pesan
+        <button id="write-btn"
+                class="px-6 py-3 bg-gradient-to-r from-cyan-400 to-teal-400 hover:from-cyan-300 hover:to-teal-300 rounded-xl text-slate-900 font-semibold transition-all duration-300 hover:scale-[1.02] active:scale-95 shadow-lg shadow-cyan-500/30 flex items-center justify-center gap-2"
+                aria-label="Tulis pesan baru untuk dilempar ke laut">
+          <span aria-hidden="true">✍️</span> Tulis Pesan
         </button>
       </div>
 
@@ -150,63 +212,93 @@
     </div>
   </main>
 
-  <!-- === WRITING STATE (Modal) === -->
-  <div id="write-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 hidden transition-all duration-500 ease-in-out">
+  <!-- === WRITING STATE (Modal Dialog) === -->
+  <div id="write-modal"
+       class="fixed inset-0 z-50 flex items-center justify-center p-4 hidden transition-all duration-500 ease-in-out"
+       role="dialog"
+       aria-modal="true"
+       aria-labelledby="modal-title"
+       aria-describedby="modal-description">
     <!-- Overlay -->
     <div id="modal-overlay" class="absolute inset-0 bg-black/40 backdrop-blur-sm transition-opacity duration-500"></div>
     <!-- Card Modal -->
     <div id="modal-card" class="relative bg-white/10 backdrop-blur-2xl border border-white/20 rounded-3xl shadow-2xl shadow-black/30 p-8 md:p-10 w-full max-w-lg scale-95 opacity-0 transition-all duration-500 ease-out">
-      
+
       <!-- Ikon & Judul Modal -->
       <div class="text-center mb-6">
-        <div class="text-5xl mb-4">📜</div>
-        <h2 class="text-white/90 text-xl md:text-2xl font-light">Tulis Pesan Rahasia</h2>
-        <p class="text-white/40 text-sm font-light mt-1">Apa yang ingin kau sampaikan pada lautan?</p>
+        <div class="text-5xl mb-4" aria-hidden="true">📜</div>
+        <h2 id="modal-title" class="text-white/90 text-xl md:text-2xl font-light">Tulis Pesan Rahasia</h2>
+        <p id="modal-description" class="text-white/40 text-sm font-light mt-1">Apa yang ingin kau sampaikan pada lautan?</p>
       </div>
 
       <!-- Form -->
       <form id="message-form" class="space-y-4">
         <div class="relative">
 
-          <!-- === FORMATTING TOOLBAR (Markdown-style helpers) === -->
-          <div class="flex gap-2 mb-2 flex-wrap">
-            <button type="button" class="toolbar-btn px-3 py-1.5 bg-white/10 hover:bg-white/20 border border-white/10 rounded-lg text-white/70 hover:text-white text-sm font-medium transition-all duration-200 active:scale-90" data-tag="bold" title="Bold (**teks**)">
+          <!-- FORMATTING TOOLBAR -->
+          <div class="flex gap-2 mb-2 flex-wrap" role="toolbar" aria-label="Alat bantu format teks">
+            <button type="button"
+                    class="toolbar-btn px-3 py-1.5 bg-white/10 hover:bg-white/20 border border-white/10 rounded-lg text-white/70 hover:text-white text-sm font-medium transition-all duration-200 active:scale-90"
+                    data-tag="bold"
+                    title="Bold (Ctrl+B)"
+                    aria-label="Tebalkan teks (Ctrl+B)">
               <strong>B</strong>
             </button>
-            <button type="button" class="toolbar-btn px-3 py-1.5 bg-white/10 hover:bg-white/20 border border-white/10 rounded-lg text-white/70 hover:text-white text-sm font-medium transition-all duration-200 active:scale-90" data-tag="strike" title="Strikethrough (~~teks~~)">
+            <button type="button"
+                    class="toolbar-btn px-3 py-1.5 bg-white/10 hover:bg-white/20 border border-white/10 rounded-lg text-white/70 hover:text-white text-sm font-medium transition-all duration-200 active:scale-90"
+                    data-tag="strike"
+                    title="Strikethrough (~~teks~~)"
+                    aria-label="Coret teks (Strikethrough)">
               <span class="line-through">S</span>
             </button>
-            <button type="button" class="toolbar-btn px-3 py-1.5 bg-white/10 hover:bg-white/20 border border-white/10 rounded-lg text-white/70 hover:text-white text-sm font-medium transition-all duration-200 active:scale-90" data-tag="sensor" title="Spoiler/Sensor (||teks||)">
+            <button type="button"
+                    class="toolbar-btn px-3 py-1.5 bg-white/10 hover:bg-white/20 border border-white/10 rounded-lg text-white/70 hover:text-white text-sm font-medium transition-all duration-200 active:scale-90"
+                    data-tag="sensor"
+                    title="Spoiler/Sensor (||teks||)"
+                    aria-label="Sensor atau spoiler teks">
               🕵️
             </button>
-            <span class="text-white/20 text-xs self-center ml-auto">Gunakan **bold**, ~~coret~~, ||sensor||</span>
+            <span class="text-white/20 text-xs self-center ml-auto" aria-hidden="true">Gunakan **bold**, ~~coret~~, ||sensor||</span>
           </div>
 
           <textarea
             id="message-input"
             rows="12"
             placeholder="Tulis cerita atau pemikiranmu... (min. 75 kata)"
-            class="w-full bg-white/5 border border-white/10 rounded-2xl p-4 text-white text-base md:text-lg placeholder-white/30 font-light resize-none focus:outline-none focus:border-white/30 focus:ring-1 focus:ring-white/20 transition-all duration-300"
+            class="w-full bg-white/5 border border-white/10 rounded-2xl p-4 text-white text-base md:text-lg placeholder-white/30 font-light resize-none focus:outline-none focus:border-cyan-400/50 focus:ring-1 focus:ring-cyan-400/30 transition-all duration-300"
+            aria-describedby="word-counter"
+            aria-label="Teks pesan yang akan dilempar ke laut"
           ></textarea>
-          <!-- Word Counter (bukan karakter lagi) -->
+          <!-- Word Counter -->
           <div class="flex justify-end mt-2 px-1">
-            <span id="word-counter" class="text-white/40 text-sm font-light tracking-wide">0 / 300 kata</span>
+            <span id="word-counter" class="text-white/40 text-sm font-light tracking-wide" role="status" aria-live="polite">0 / 300 kata</span>
           </div>
         </div>
 
         <!-- Tombol Aksi -->
         <div class="flex flex-col sm:flex-row gap-3 pt-2">
-          <button type="submit" id="throw-btn" class="flex-1 px-6 py-3 bg-gradient-to-r from-amber-400 to-orange-400 hover:from-amber-300 hover:to-orange-300 rounded-xl text-slate-900 font-semibold transition-all duration-300 hover:scale-[1.02] active:scale-95 shadow-lg shadow-amber-500/30 flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100" disabled>
-            <span>💧</span> Lempar ke Laut
+          <button type="submit"
+                  id="throw-btn"
+                  class="flex-1 px-6 py-3 bg-gradient-to-r from-amber-400 to-orange-400 hover:from-amber-300 hover:to-orange-300 rounded-xl text-slate-900 font-semibold transition-all duration-300 hover:scale-[1.02] active:scale-95 shadow-lg shadow-amber-500/30 flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100"
+                  aria-label="Lempar pesan ke laut"
+                  aria-disabled="true"
+                  disabled>
+            <span aria-hidden="true">💧</span> Lempar ke Laut
           </button>
-          <button type="button" id="cancel-btn" class="flex-1 px-6 py-3 bg-white/10 hover:bg-white/20 backdrop-blur-sm border border-white/10 rounded-xl text-white/80 hover:text-white font-medium transition-all duration-300 hover:scale-[1.02] active:scale-95 flex items-center justify-center gap-2">
-            <span>↩️</span> Batal / Kembali
+          <button type="button"
+                  id="cancel-btn"
+                  class="flex-1 px-6 py-3 bg-white/10 hover:bg-white/20 backdrop-blur-sm border border-white/10 rounded-xl text-white/80 hover:text-white font-medium transition-all duration-300 hover:scale-[1.02] active:scale-95 flex items-center justify-center gap-2"
+                  aria-label="Batal dan kembali ke halaman utama">
+            <span aria-hidden="true">↩️</span> Batal / Kembali
           </button>
         </div>
       </form>
 
       <!-- Notifikasi sukses (setelah POST) -->
-      <div id="success-notification" class="hidden mt-4 p-3 bg-emerald-400/20 backdrop-blur-sm border border-emerald-400/30 rounded-xl text-emerald-300 text-sm text-center font-light animate-fade-in">
+      <div id="success-notification"
+           class="hidden mt-4 p-3 bg-emerald-400/20 backdrop-blur-sm border border-emerald-400/30 rounded-xl text-emerald-300 text-sm text-center font-light animate-fade-in"
+           role="status"
+           aria-live="polite">
         ✅ Pesan berhasil dilempar ke laut!
       </div>
 

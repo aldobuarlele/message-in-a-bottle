@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>404 — Lautan Tidak Menemukan 🧴</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'system-ui', 'sans-serif'],
+          },
+        }
+      }
+    }
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    @keyframes float {
+      0%, 100% { transform: translateY(0px) rotate(-3deg); }
+      50% { transform: translateY(-12px) rotate(3deg); }
+    }
+    .animate-float-slow {
+      animation: float 4s ease-in-out infinite;
+    }
+    @keyframes drift {
+      0% { transform: translateX(0); opacity: 0.3; }
+      50% { transform: translateX(20px); opacity: 0.6; }
+      100% { transform: translateX(0); opacity: 0.3; }
+    }
+    .animate-drift {
+      animation: drift 6s ease-in-out infinite;
+    }
+  </style>
+</head>
+<body class="min-h-screen bg-gradient-to-br from-slate-900 via-cyan-800 to-amber-300 font-sans flex items-center justify-center p-4 md:p-8 relative overflow-x-hidden">
+
+  <!-- === DECORATIVE BACKGROUND === -->
+  <div class="fixed inset-0 pointer-events-none overflow-hidden">
+    <div class="absolute top-5 left-5 w-64 h-64 bg-white/5 rounded-full blur-3xl"></div>
+    <div class="absolute bottom-10 right-10 w-80 h-80 bg-amber-300/10 rounded-full blur-3xl"></div>
+    <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-cyan-400/5 rounded-full blur-3xl"></div>
+  </div>
+
+  <!-- === MAIN CONTENT === -->
+  <main class="relative w-full max-w-lg">
+    <div class="bg-white/10 backdrop-blur-xl border border-white/20 rounded-3xl shadow-2xl shadow-black/20 p-8 md:p-10 text-center">
+
+      <!-- Bottle illustration -->
+      <div class="text-7xl mb-6 animate-float-slow" aria-hidden="true">🧴</div>
+
+      <!-- Title -->
+      <h1 class="text-white/90 text-5xl md:text-6xl font-bold tracking-tight mb-2">404</h1>
+      <p class="text-white/50 text-lg md:text-xl font-light mb-2">Halaman Tidak Ditemukan</p>
+
+      <!-- Divider -->
+      <div class="w-16 h-px bg-white/20 mx-auto my-6"></div>
+
+      <!-- Ocean-themed message -->
+      <div class="space-y-4">
+        <p class="text-white/70 text-base md:text-lg font-light leading-relaxed">
+          🌊 Upps... Lautan ini tidak memiliki pulau yang kau cari.
+        </p>
+        <p class="text-white/40 text-sm font-light leading-relaxed">
+          Mungkin ombak telah membawa halaman ini ke tempat yang jauh,<br>
+          atau mungkin belum pernah ada di sini sama sekali.
+        </p>
+      </div>
+
+      <!-- Divider -->
+      <div class="w-16 h-px bg-white/20 mx-auto my-6"></div>
+
+      <!-- Navigation -->
+      <div class="flex flex-col sm:flex-row gap-3 justify-center">
+        <a href="/"
+           class="px-6 py-3 bg-gradient-to-r from-cyan-400 to-teal-400 hover:from-cyan-300 hover:to-teal-300 rounded-xl text-slate-900 font-semibold transition-all duration-300 hover:scale-[1.02] active:scale-95 shadow-lg shadow-cyan-500/30 flex items-center justify-center gap-2"
+           aria-label="Kembali ke halaman utama Message in a Bottle">
+          <span>🏖️</span> Kembali ke Pantai
+        </a>
+        <button onclick="window.history.back()"
+                class="px-6 py-3 bg-white/15 hover:bg-white/25 backdrop-blur-sm border border-white/20 rounded-xl text-white font-medium transition-all duration-300 hover:scale-[1.02] active:scale-95 flex items-center justify-center gap-2"
+                aria-label="Kembali ke halaman sebelumnya">
+          <span>↩️</span> Kembali Sebelumnya
+        </button>
+      </div>
+
+      <!-- Footer -->
+      <div class="mt-8 animate-drift" aria-hidden="true">
+        <p class="text-white/20 text-xs font-light tracking-wider">~ Message in a Bottle ~</p>
+      </div>
+
+    </div>
+  </main>
+
+</body>
+</html>
