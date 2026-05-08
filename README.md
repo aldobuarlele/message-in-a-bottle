@@ -34,6 +34,23 @@
 </p>
 
 <br>
+---
+
+## ✨ Features
+
+| # | Fitur | Detail |
+|---|-------|--------|
+| 🪟 | **UI Glassmorphism Modern** | Card transparan dengan `backdrop-blur-xl`, `border-white/20`, dan `bg-white/10` menciptakan efek kaca buram yang elegan. Latar gradien laut dari slate ke cyan ke amber. |
+| 🎲 | **Ambil Pesan Acak** | Satu klik — dapatkan satu botol misterius dari lautan. Setiap kali refresh, pesan yang muncul berbeda. |
+| 📝 | **Tulis Pesan Anonim** | Tulis rahasia tanpa login, registrasi, atau identitas apapun. Murni anonim. |
+| 📊 | **Real-time Character Counter** | Counter 0/300 dengan feedback visual: putih (< 200), amber (200–279), merah (280+). |
+| 🔄 | **Auto-fetch on Load** | Begitu halaman dimuat, aplikasi otomatis mengambil satu pesan acak — pengalaman seperti menemukan botol begitu tiba di pantai. |
+| 🎭 | **4 Visual States** | State management lengkap: **Loading** (animasi ping), **Message** (teks pesan), **Empty** (database kosong), **Error** (koneksi gagal). Transisi mulus dengan fade-in-up. |
+| ⌨️ | **Keyboard Shortcut** | Tekan `Escape` untuk menutup modal menulis — UX cepat dan intuitif. |
+| 🔒 | **Privasi Penuh** | Tidak ada metadata. Tidak ada IP pengirim. Tidak ada timestamp. Botol murni tanpa jejak. |
+| 🌊 | **Animasi Halus** | Botol melayang (float), modal fade-in-scale, tombol hover scale, dan pulse loading — semuanya dengan CSS keyframes murni tanpa library animasi tambahan. |
+| 📱 | **Responsive Design** | Layout menyesuaikan dari mobile ke desktop dengan flexbox Tailwind. |
+
 
 ---
 
@@ -51,22 +68,7 @@
 | ![Loading State](https://via.placeholder.com/400x200/1e293b/94a3b8?text=Loading+State+-+Animasi+Ping) | ![Empty State](https://via.placeholder.com/400x200/1e293b/94a3b8?text=Empty+State+-+Lautan+Sepi) |
 | Animasi <code>ping</code> dan teks "Mencari botol di lautan..." saat fetch. | Muncul saat database kosong — mengajak pengguna jadi yang pertama. |
 
----
 
-## ✨ Features
-
-| # | Fitur | Detail |
-|---|-------|--------|
-| 🪟 | **UI Glassmorphism Modern** | Card transparan dengan `backdrop-blur-xl`, `border-white/20`, dan `bg-white/10` menciptakan efek kaca buram yang elegan. Latar gradien laut dari slate ke cyan ke amber. |
-| 🎲 | **Ambil Pesan Acak** | Satu klik — dapatkan satu botol misterius dari lautan. Setiap kali refresh, pesan yang muncul berbeda. |
-| 📝 | **Tulis Pesan Anonim** | Tulis rahasia tanpa login, registrasi, atau identitas apapun. Murni anonim. |
-| 📊 | **Real-time Character Counter** | Counter 0/300 dengan feedback visual: putih (< 200), amber (200–279), merah (280+). |
-| 🔄 | **Auto-fetch on Load** | Begitu halaman dimuat, aplikasi otomatis mengambil satu pesan acak — pengalaman seperti menemukan botol begitu tiba di pantai. |
-| 🎭 | **4 Visual States** | State management lengkap: **Loading** (animasi ping), **Message** (teks pesan), **Empty** (database kosong), **Error** (koneksi gagal). Transisi mulus dengan fade-in-up. |
-| ⌨️ | **Keyboard Shortcut** | Tekan `Escape` untuk menutup modal menulis — UX cepat dan intuitif. |
-| 🔒 | **Privasi Penuh** | Tidak ada metadata. Tidak ada IP pengirim. Tidak ada timestamp. Botol murni tanpa jejak. |
-| 🌊 | **Animasi Halus** | Botol melayang (float), modal fade-in-scale, tombol hover scale, dan pulse loading — semuanya dengan CSS keyframes murni tanpa library animasi tambahan. |
-| 📱 | **Responsive Design** | Layout menyesuaikan dari mobile ke desktop dengan flexbox Tailwind. |
 
 ---
 
