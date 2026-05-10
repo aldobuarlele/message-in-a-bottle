@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin — Message in a Bottle</title>
+  <meta name="robots" content="noindex, nofollow">
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'system-ui', 'sans-serif'],
+          },
+        }
+      }
+    }
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(20px) scale(0.95); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+    .animate-fade-in-up {
+      animation: fadeInUp 0.5s ease-out forwards;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    .animate-fade-in {
+      animation: fadeIn 0.4s ease-out forwards;
+    }
+    @keyframes pulseSoft {
+      0%, 100% { opacity: 0.6; }
+      50% { opacity: 1; }
+    }
+    .animate-pulse-soft {
+      animation: pulseSoft 1.5s ease-in-out infinite;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    .animate-spin {
+      animation: spin 0.8s linear infinite;
+    }
+    :focus-visible {
+      outline: 2px solid #22d3ee;
+      outline-offset: 2px;
+      border-radius: 4px;
+    }
+    /* Custom scrollbar for the table container */
+    .table-scroll::-webkit-scrollbar { height: 6px; }
+    .table-scroll::-webkit-scrollbar-track { background: transparent; }
+    .table-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 3px; }
+  </style>
+</head>
+<body class="min-h-screen bg-gradient-to-br from-slate-900 via-cyan-800 to-amber-300 font-sans relative overflow-x-hidden">
+
+  <!-- === DECORATIVE BG === -->
+  <div class="fixed inset-0 pointer-events-none overflow-hidden" aria-hidden="true">
+    <div class="absolute top-10 left-10 w-72 h-72 bg-white/5 rounded-full blur-3xl"></div>
+    <div class="absolute bottom-10 right-10 w-96 h-96 bg-amber-300/10 rounded-full blur-3xl"></div>
+    <div class="absolute top-1/3 right-1/4 w-48 h-48 bg-cyan-400/10 rounded-full blur-2xl"></div>
+  </div>
+
+  <!-- ======================== -->
+  <!-- 🔐 LOGIN VIEW -->
+  <!-- ======================== -->
+  <div id="login-view" class="relative min-h-screen flex items-center justify-center p-4">
+    <div class="w-full max-w-md bg-white/10 backdrop-blur-xl border border-white/20 rounded-3xl shadow-2xl shadow-black/20 p-8 md:p-10 text-center animate-fade-in-up">
+
+      <div class="text-6xl mb-4" aria-hidden="true">🗝️</div>
+      <h1 class="text-white/90 text-xl md:text-2xl font-light tracking-wide mb-2">Admin Panel</h1>
+      <p class="text-white/40 text-sm font-light mb-8">Masuk untuk memoderasi pesan</p>
+
+      <form id="login-form" class="space-y-5">
+        <div class="text-left">
+          <label for="login-username" class="text-white/60 text-sm font-light block mb-1.5">Username</label>
+          <input
+            id="login-username"
+            type="text"
+            autocomplete="username"
+            required
+            class="w-full bg-white/5 border border-white/10 rounded-xl p-3.5 text-white text-base placeholder-white/30 font-light focus:outline-none focus:border-cyan-400/50 focus:ring-1 focus:ring-cyan-400/30 transition-all duration-300"
+            placeholder="admin"
+          />
+        </div>
+
+        <div class="text-left">
+          <label for="login-password" class="text-white/60 text-sm font-light block mb-1.5">Password</label>
+          <input
+            id="login-password"
+            type="password"
+            autocomplete="current-password"
+            required
+            class="w-full bg-white/5 border border-white/10 rounded-xl p-3.5 text-white text-base placeholder-white/30 font-light focus:outline-none focus:border-cyan-400/50 focus:ring-1 focus:ring-cyan-400/30 transition-all duration-300"
+            placeholder="••••••••"
+          />
+        </div>
+
+        <div id="login-error" class="hidden text-red-300/90 text-sm font-light bg-red-400/10 border border-red-400/20 rounded-lg p-3" role="alert"></div>
+
+        <button
+          id="login-btn"
+          type="submit"
+          class="w-full px-6 py-3.5 bg-gradient-to-r from-cyan-400 to-teal-400 hover:from-cyan-300 hover:to-teal-300 rounded-xl text-slate-900 font-semibold transition-all duration-300 hover:scale-[1.02] active:scale-95 shadow-lg shadow-cyan-500/30 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          <span id="login-btn-text">🔑 Masuk</span>
+          <span id="login-btn-spinner" class="hidden inline-block w-4 h-4 border-2 border-slate-900 border-t-transparent rounded-full animate-spin"></span>
+        </button>
+      </form>
+
+      <p class="text-white/20 text-xs mt-6 font-light">Message in a Bottle — Admin</p>
+    </div>
+  </div>
+
+  <!-- ======================== -->
+  <!-- 📊 DASHBOARD VIEW -->
+  <!-- ======================== -->
+  <div id="dashboard-view" class="hidden relative min-h-screen p-4 md:p-6 lg:p-8">
+    <div class="max-w-6xl mx-auto">
+
+      <!-- Top Navigation -->
+      <div class="bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl shadow-xl shadow-black/10 p-4 md:p-6 mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 animate-fade-in-up">
+        <div class="flex items-center gap-3">
+          <span class="text-2xl" aria-hidden="true">🧴</span>
+          <div>
+            <h1 class="text-white/90 text-lg md:text-xl font-light">Message in a Bottle</h1>
+            <p class="text-white/40 text-xs font-light">Panel Admin</p>
+          </div>
+        </div>
+        <div class="flex items-center gap-4">
+          <span class="text-white/50 text-sm font-light" id="admin-welcome">Halo, admin</span>
+          <button
+            id="logout-btn"
+            class="px-4 py-2 bg-white/10 hover:bg-white/20 border border-white/10 rounded-xl text-white/70 hover:text-white text-sm font-medium transition-all duration-200 active:scale-95"
+          >
+            🚪 Keluar
+          </button>
+        </div>
+      </div>
+
+      <!-- Search & Stats Bar -->
+      <div class="bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl shadow-xl shadow-black/10 p-4 md:p-6 mb-6 animate-fade-in-up">
+        <div class="flex flex-col sm:flex-row gap-4 items-start sm:items-center sm:justify-between">
+          <div class="relative flex-1 max-w-md w-full">
+            <input
+              id="search-input"
+              type="text"
+              placeholder="🔍 Cari pesan..."
+              class="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white text-sm placeholder-white/30 font-light focus:outline-none focus:border-cyan-400/50 focus:ring-1 focus:ring-cyan-400/30 transition-all duration-200"
+            />
+          </div>
+          <div class="text-white/40 text-sm font-light" id="stats-display">
+            Memuat...
+          </div>
+        </div>
+      </div>
+
+      <!-- Messages Table -->
+      <div class="bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl shadow-xl shadow-black/10 p-4 md:p-6 animate-fade-in-up">
+        <!-- Loading State -->
+        <div id="table-loading" class="flex items-center justify-center py-16">
+          <div class="text-center">
+            <div class="inline-block w-8 h-8 border-2 border-cyan-400/50 border-t-cyan-400 rounded-full animate-spin mb-3"></div>
+            <p class="text-white/40 text-sm font-light animate-pulse-soft">Memuat pesan...</p>
+          </div>
+        </div>
+
+        <!-- Empty State -->
+        <div id="table-empty" class="hidden text-center py-16">
+          <span class="text-4xl block mb-3" aria-hidden="true">🌊</span>
+          <p class="text-white/50 text-base font-light">Tidak ada pesan ditemukan</p>
+        </div>
+
+        <!-- Error State -->
+        <div id="table-error" class="hidden text-center py-16">
+          <span class="text-4xl block mb-3" aria-hidden="true">⚠️</span>
+          <p class="text-red-300/80 text-base font-light mb-4" id="table-error-msg">Gagal memuat data</p>
+          <button id="retry-btn" class="px-4 py-2 bg-white/10 hover:bg-white/20 border border-white/10 rounded-xl text-white/70 text-sm transition-all duration-200">Coba Lagi</button>
+        </div>
+
+        <!-- Actual Table -->
+        <div id="table-content" class="hidden">
+          <div class="overflow-x-auto table-scroll">
+            <table class="w-full text-left text-white/80 text-sm">
+              <thead>
+                <tr class="border-b border-white/10 text-white/50 text-xs uppercase tracking-wider font-medium">
+                  <th class="pb-3 pr-4 w-16">ID</th>
+                  <th class="pb-3 pr-4">Pesan</th>
+                  <th class="pb-3 pr-4 text-center w-24">Kata</th>
+                  <th class="pb-3 pr-4 w-36">Dibuat</th>
+                  <th class="pb-3 text-center w-24">Aksi</th>
+                </tr>
+              </thead>
+              <tbody id="table-body">
+                <!-- Rows injected by JS -->
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Pagination -->
+          <div id="pagination" class="flex items-center justify-between mt-6 pt-4 border-t border-white/10">
+            <button
+              id="prev-btn"
+              class="px-4 py-2 bg-white/10 hover:bg-white/20 border border-white/10 rounded-xl text-white/70 hover:text-white text-sm font-medium transition-all duration-200 disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-white/10"
+              disabled
+            >
+              ← Sebelumnya
+            </button>
+            <span id="page-info" class="text-white/40 text-sm font-light">Halaman 0 dari 0</span>
+            <button
+              id="next-btn"
+              class="px-4 py-2 bg-white/10 hover:bg-white/20 border border-white/10 rounded-xl text-white/70 hover:text-white text-sm font-medium transition-all duration-200 disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-white/10"
+              disabled
+            >
+              Selanjutnya →
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Footer -->
+      <p class="text-white/20 text-xs text-center mt-6 font-light">Message in a Bottle — Admin Panel</p>
+    </div>
+  </div>
+
+  <!-- ======================== -->
+  <!-- 🗑️ DELETE CONFIRM MODAL -->
+  <!-- ======================== -->
+  <div id="delete-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 hidden" role="dialog" aria-modal="true" aria-labelledby="delete-modal-title">
+    <div class="absolute inset-0 bg-black/40 backdrop-blur-sm transition-opacity duration-300" id="delete-overlay"></div>
+    <div class="relative bg-white/10 backdrop-blur-2xl border border-white/20 rounded-3xl shadow-2xl shadow-black/30 p-8 w-full max-w-sm text-center animate-fade-in-up">
+      <div class="text-5xl mb-4" aria-hidden="true">⚠️</div>
+      <h2 id="delete-modal-title" class="text-white/90 text-lg font-light mb-2">Hapus Pesan</h2>
+      <p class="text-white/50 text-sm font-light mb-6">
+        Yakin ingin menghapus pesan #<span id="delete-id-display"></span>?
+      </p>
+      <p class="text-amber-300/60 text-xs font-light mb-6">Tindakan ini tidak bisa dibatalkan.</p>
+      <div class="flex gap-3">
+        <button id="delete-cancel-btn" class="flex-1 px-4 py-3 bg-white/10 hover:bg-white/20 border border-white/10 rounded-xl text-white/70 font-medium transition-all duration-200 text-sm">
+          Batal
+        </button>
+        <button id="delete-confirm-btn" class="flex-1 px-4 py-3 bg-gradient-to-r from-red-500 to-rose-500 hover:from-red-400 hover:to-rose-400 rounded-xl text-white font-semibold transition-all duration-200 text-sm shadow-lg shadow-red-500/30 flex items-center justify-center gap-2">
+          <span id="delete-confirm-text">🗑️ Hapus</span>
+          <span id="delete-spinner" class="hidden inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================== -->
+  <!-- 🛠️ JAVASCRIPT -->
+  <!-- ======================== -->
+  <script>
+    (function () {
+      'use strict';
+
+      // --- DOM refs ---
+      const loginView = document.getElementById('login-view');
+      const dashboardView = document.getElementById('dashboard-view');
+      const loginForm = document.getElementById('login-form');
+      const loginUsername = document.getElementById('login-username');
+      const loginPassword = document.getElementById('login-password');
+      const loginError = document.getElementById('login-error');
+      const loginBtn = document.getElementById('login-btn');
+      const loginBtnText = document.getElementById('login-btn-text');
+      const loginBtnSpinner = document.getElementById('login-btn-spinner');
+
+      const logoutBtn = document.getElementById('logout-btn');
+      const adminWelcome = document.getElementById('admin-welcome');
+      const searchInput = document.getElementById('search-input');
+      const statsDisplay = document.getElementById('stats-display');
+
+      const tableLoading = document.getElementById('table-loading');
+      const tableEmpty = document.getElementById('table-empty');
+      const tableError = document.getElementById('table-error');
+      const tableErrorMsg = document.getElementById('table-error-msg');
+      const retryBtn = document.getElementById('retry-btn');
+      const tableContent = document.getElementById('table-content');
+      const tableBody = document.getElementById('table-body');
+      const prevBtn = document.getElementById('prev-btn');
+      const nextBtn = document.getElementById('next-btn');
+      const pageInfo = document.getElementById('page-info');
+
+      const deleteModal = document.getElementById('delete-modal');
+      const deleteOverlay = document.getElementById('delete-overlay');
+      const deleteIdDisplay = document.getElementById('delete-id-display');
+      const deleteCancelBtn = document.getElementById('delete-cancel-btn');
+      const deleteConfirmBtn = document.getElementById('delete-confirm-btn');
+      const deleteConfirmText = document.getElementById('delete-confirm-text');
+      const deleteSpinner = document.getElementById('delete-spinner');
+
+      // --- State ---
+      let currentPage = 1;
+      let currentPagination = null;
+      let searchTimeout = null;
+      let pendingDeleteId = null;
+
+      // --- Helpers ---
+      function getToken() {
+        return sessionStorage.getItem('admin_token');
+      }
+
+      function setToken(token) {
+        if (token) {
+          sessionStorage.setItem('admin_token', token);
+        } else {
+          sessionStorage.removeItem('admin_token');
+        }
+      }
+
+      function authHeaders() {
+        const token = getToken();
+        return token ? { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' } : { 'Content-Type': 'application/json' };
+      }
+
+      async function apiFetch(url, options) {
+        options = options || {};
+        options.headers = Object.assign({}, authHeaders(), options.headers || {});
+        const res = await fetch(url, options);
+        return res;
+      }
+
+      function showLoginView() {
+        loginView.classList.remove('hidden');
+        dashboardView.classList.add('hidden');
+        loginUsername.value = '';
+        loginPassword.value = '';
+        loginError.classList.add('hidden');
+      }
+
+      function showDashboardView() {
+        loginView.classList.add('hidden');
+        dashboardView.classList.remove('hidden');
+        currentPage = 1;
+        loadMessages();
+      }
+
+      function showDeleteError(msg) {
+        loginError.textContent = msg;
+        loginError.classList.remove('hidden');
+      }
+
+      function setLoginLoading(loading) {
+        loginBtn.disabled = loading;
+        if (loading) {
+          loginBtnText.classList.add('hidden');
+          loginBtnSpinner.classList.remove('hidden');
+        } else {
+          loginBtnText.classList.remove('hidden');
+          loginBtnSpinner.classList.add('hidden');
+        }
+      }
+
+      function escapeHtml(str) {
+        const div = document.createElement('div');
+        div.appendChild(document.createTextNode(str));
+        return div.innerHTML;
+      }
+
+      function truncateMessage(text, maxLen) {
+        if (text.length <= maxLen) return escapeHtml(text);
+        return escapeHtml(text.substring(0, maxLen)) + '...';
+      }
+
+      // --- Login ---
+      loginForm.addEventListener('submit', async function (e) {
+        e.preventDefault();
+        loginError.classList.add('hidden');
+
+        const username = loginUsername.value.trim();
+        const password = loginPassword.value.trim();
+
+        if (!username || !password) {
+          showDeleteError('Username dan password harus diisi');
+          return;
+        }
+
+        setLoginLoading(true);
+
+        try {
+          const res = await fetch('/api/admin/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username, password }),
+          });
+
+          const data = await res.json();
+
+          if (res.ok && data.token) {
+            setToken(data.token);
+            showDashboardView();
+          } else {
+            showDeleteError(data.error || 'Login gagal');
+          }
+        } catch (err) {
+          console.error('Login error:', err);
+          showDeleteError('Gagal terhubung ke server. Coba lagi.');
+        } finally {
+          setLoginLoading(false);
+        }
+      });
+
+      // --- Logout ---
+      logoutBtn.addEventListener('click', function () {
+        setToken(null);
+        showLoginView();
+      });
+
+      // --- Load Messages ---
+      async function loadMessages() {
+        // Show loading, hide everything else
+        tableLoading.classList.remove('hidden');
+        tableEmpty.classList.add('hidden');
+        tableError.classList.add('hidden');
+        tableContent.classList.add('hidden');
+
+        const search = searchInput.value.trim();
+        let url = '/api/admin/messages?page=' + currentPage + '&limit=50';
+        if (search) {
+          url += '&search=' + encodeURIComponent(search);
+        }
+
+        try {
+          const res = await apiFetch(url);
+
+          if (res.status === 401) {
+            // Token expired or invalid
+            setToken(null);
+            showLoginView();
+            return;
+          }
+
+          if (!res.ok) {
+            const data = await res.json();
+            throw new Error(data.error || 'Gagal memuat data');
+          }
+
+          const data = await res.json();
+
+          tableLoading.classList.add('hidden');
+
+          if (!data.messages || data.messages.length === 0) {
+            tableEmpty.classList.remove('hidden');
+            statsDisplay.textContent = '0 pesan';
+            return;
+          }
+
+          currentPagination = data.pagination;
+          renderTable(data.messages);
+          renderPagination(data.pagination);
+          statsDisplay.textContent = data.pagination.total + ' pesan';
+          tableContent.classList.remove('hidden');
+
+        } catch (err) {
+          console.error('Load messages error:', err);
+          tableLoading.classList.add('hidden');
+          tableError.classList.remove('hidden');
+          tableErrorMsg.textContent = err.message || 'Gagal memuat data';
+        }
+      }
+
+      function renderTable(messages) {
+        tableBody.innerHTML = '';
+
+        for (const msg of messages) {
+          const tr = document.createElement('tr');
+          tr.className = 'border-b border-white/5 hover:bg-white/5 transition-colors duration-150';
+
+          const createdAt = msg.created_at
+            ? new Date(msg.created_at + 'Z').toLocaleDateString('id-ID', {
+                day: 'numeric', month: 'short', year: 'numeric',
+                hour: '2-digit', minute: '2-digit'
+              })
+            : 'Unknown';
+
+          tr.innerHTML =
+            '<td class="py-3 pr-4 text-white/40 font-mono text-xs align-top pt-4">' + msg.id + '</td>' +
+            '<td class="py-3 pr-4 text-white/80 font-light text-sm leading-relaxed break-words max-w-md align-top pt-4">' + truncateMessage(msg.message, 200) + '</td>' +
+            '<td class="py-3 pr-4 text-center align-top pt-4"><span class="inline-block px-2 py-0.5 bg-white/10 rounded-full text-white/50 text-xs">' + msg.word_count + '</span></td>' +
+            '<td class="py-3 pr-4 text-white/40 text-xs font-light align-top pt-4">' + createdAt + '</td>' +
+            '<td class="py-3 text-center align-top pt-4">' +
+              '<button class="delete-btn px-3 py-1.5 bg-red-400/20 hover:bg-red-400/30 border border-red-400/20 rounded-lg text-red-300/80 hover:text-red-300 text-sm transition-all duration-200 active:scale-90" data-id="' + msg.id + '" title="Hapus pesan #' + msg.id + '">' +
+                '🗑️' +
+              '</button>' +
+            '</td>';
+
+          tableBody.appendChild(tr);
+        }
+
+        // Attach delete event listeners
+        document.querySelectorAll('.delete-btn').forEach(function (btn) {
+          btn.addEventListener('click', function () {
+            const id = parseInt(this.dataset.id, 10);
+            openDeleteModal(id);
+          });
+        });
+      }
+
+      function renderPagination(pag) {
+        pageInfo.textContent = 'Halaman ' + pag.page + ' dari ' + pag.totalPages;
+
+        prevBtn.disabled = !pag.hasPrev;
+        nextBtn.disabled = !pag.hasNext;
+
+        prevBtn.classList.toggle('disabled\\:opacity-30', !pag.hasPrev);
+        nextBtn.classList.toggle('disabled\\:opacity-30', !pag.hasNext);
+      }
+
+      // --- Pagination ---
+      prevBtn.addEventListener('click', function () {
+        if (currentPagination && currentPagination.hasPrev) {
+          currentPage = currentPagination.page - 1;
+          loadMessages();
+        }
+      });
+
+      nextBtn.addEventListener('click', function () {
+        if (currentPagination && currentPagination.hasNext) {
+          currentPage = currentPagination.page + 1;
+          loadMessages();
+        }
+      });
+
+      // --- Retry ---
+      retryBtn.addEventListener('click', function () {
+        loadMessages();
+      });
+
+      // --- Search with debounce ---
+      searchInput.addEventListener('input', function () {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(function () {
+          currentPage = 1;
+          loadMessages();
+        }, 300);
+      });
+
+      // --- Delete Modal ---
+      function openDeleteModal(id) {
+        pendingDeleteId = id;
+        deleteIdDisplay.textContent = id;
+        deleteConfirmText.textContent = '🗑️ Hapus';
+        deleteSpinner.classList.add('hidden');
+        deleteConfirmBtn.disabled = false;
+        deleteModal.classList.remove('hidden');
+      }
+
+      function closeDeleteModal() {
+        deleteModal.classList.add('hidden');
+        pendingDeleteId = null;
+      }
+
+      deleteOverlay.addEventListener('click', closeDeleteModal);
+      deleteCancelBtn.addEventListener('click', closeDeleteModal);
+
+      deleteConfirmBtn.addEventListener('click', async function () {
+        if (pendingDeleteId === null) return;
+
+        // Loading state
+        deleteConfirmText.textContent = 'Menghapus...';
+        deleteSpinner.classList.remove('hidden');
+        deleteConfirmBtn.disabled = true;
+
+        try {
+          const res = await apiFetch('/api/admin/messages/' + pendingDeleteId, {
+            method: 'DELETE',
+          });
+
+          if (res.status === 401) {
+            setToken(null);
+            closeDeleteModal();
+            showLoginView();
+            return;
+          }
+
+          if (!res.ok) {
+            const data = await res.json();
+            throw new Error(data.error || 'Gagal menghapus pesan');
+          }
+
+          // Success — close modal and reload
+          closeDeleteModal();
+          loadMessages();
+
+        } catch (err) {
+          console.error('Delete error:', err);
+          alert('Gagal menghapus pesan: ' + (err.message || 'Unknown error'));
+          deleteConfirmText.textContent = '🗑️ Hapus';
+          deleteSpinner.classList.add('hidden');
+          deleteConfirmBtn.disabled = false;
+        }
+      });
+
+      // --- Keyboard: Escape to close delete modal ---
+      document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape' && !deleteModal.classList.contains('hidden')) {
+          closeDeleteModal();
+        }
+      });
+
+      // ============================
+      // 🚀 INIT — Check token on load
+      // ============================
+      async function init() {
+        const token = getToken();
+
+        if (!token) {
+          showLoginView();
+          return;
+        }
+
+        // Verify token is still valid
+        try {
+          const res = await apiFetch('/api/admin/me');
+          if (res.ok) {
+            const data = await res.json();
+            adminWelcome.textContent = 'Halo, ' + data.username;
+            showDashboardView();
+          } else {
+            setToken(null);
+            showLoginView();
+          }
+        } catch (err) {
+          // Network error — still try to show dashboard (might be temporary)
+          console.error('Token verification error:', err);
+          setToken(null);
+          showLoginView();
+        }
+      }
+
+      init();
+
+    })();
+  </script>
+</body>
+</html>

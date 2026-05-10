@@ -2,6 +2,7 @@ const express = require('express');
 const sqlite3 = require('sqlite3').verbose();
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
+const jwt = require('jsonwebtoken');
 const path = require('path');
 const CONFIG = require('./config.js');
 const app = express();
@@ -77,8 +78,9 @@ app.use((req, res, next) => {
   next();
 });
 
-// Serve static files
+// Serve static files (root + public directory)
 app.use(express.static(__dirname));
+app.use(express.static(path.join(__dirname, 'public')));
 
 // ============================
 // 🛡️ 4. REQUEST TIMEOUT
@@ -103,6 +105,41 @@ db.serialize(function () {
       message TEXT NOT NULL
     );
   `);
+
+  // === Migrasi: tambah kolom created_at jika belum ada ===
+  // SQLite tidak memiliki IF NOT EXISTS untuk ALTER TABLE,
+  // jadi kita cek pragma table_info terlebih dahulu.
+  db.all("PRAGMA table_info(messages);", (err, columns) => {
+    if (err) {
+      logger.error(err, 'Gagal membaca schema tabel');
+      return;
+    }
+
+    const hasCreatedAt = columns.some(col => col.name === 'created_at');
+    if (!hasCreatedAt) {
+      // SQLite versi lama tidak mendukung DEFAULT dengan fungsi datetime('now')
+      // pada ALTER TABLE. Jadi kita tambah kolom dulu tanpa default,
+      // lalu isi manual dengan UPDATE.
+      db.run("ALTER TABLE messages ADD COLUMN created_at TEXT;", (alterErr) => {
+        if (alterErr) {
+          logger.error(alterErr, 'Gagal migrasi created_at');
+        } else {
+          logger.info('Migrasi: kolom created_at berhasil ditambahkan');
+
+          // Set created_at untuk baris yang sudah ada ke timestamp sekarang
+          db.run("UPDATE messages SET created_at = datetime('now') WHERE created_at IS NULL;", (updateErr) => {
+            if (updateErr) {
+              logger.error(updateErr, 'Gagal mengisi created_at untuk data lama');
+            } else {
+              logger.info('Migrasi: created_at diisi untuk semua data lama');
+            }
+          });
+        }
+      });
+    } else {
+      logger.info('Kolom created_at sudah ada — tidak perlu migrasi');
+    }
+  });
 
   db.run('PRAGMA journal_mode=WAL;');
   db.run('PRAGMA synchronous=NORMAL;');
@@ -129,8 +166,40 @@ const getLimiter = rateLimit({
   legacyHeaders: false,
 });
 
+const adminLoginLimiter = rateLimit({
+  windowMs: CONFIG.ADMIN_LOGIN_RATE_LIMIT_WINDOW_MS,
+  max: CONFIG.ADMIN_LOGIN_RATE_LIMIT_MAX,
+  message: { error: 'Terlalu banyak percobaan login. Coba lagi nanti.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 // ============================
-// 🛠️ 7. HELPER FUNCTIONS
+// 🛡️ 7. REQUIRE ADMIN MIDDLEWARE (JWT)
+// ============================
+function requireAdmin(req, res, next) {
+  const authHeader = req.headers.authorization;
+
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({ error: 'Unauthorized — no token provided' });
+  }
+
+  const token = authHeader.split(' ')[1];
+
+  try {
+    const decoded = jwt.verify(token, CONFIG.JWT_SECRET);
+    req.admin = decoded;
+    next();
+  } catch (err) {
+    if (err.name === 'TokenExpiredError') {
+      return res.status(401).json({ error: 'Token expired', code: 'TOKEN_EXPIRED' });
+    }
+    return res.status(401).json({ error: 'Invalid token' });
+  }
+}
+
+// ============================
+// 🛠️ 8. HELPER FUNCTIONS
 // ============================
 function countWords(text) {
   const trimmed = text.trim();
@@ -163,7 +232,7 @@ function enforceStorageLimit(callback) {
 }
 
 // ============================
-// 💓 8. HEALTH CHECK ENDPOINT
+// 💓 9. HEALTH CHECK ENDPOINT
 // ============================
 app.get('/api/health', (req, res) => {
   res.json({
@@ -175,7 +244,7 @@ app.get('/api/health', (req, res) => {
 });
 
 // ============================
-// 📩 9. POST /api/messages
+// 📩 10. POST /api/messages
 // ============================
 app.post('/api/messages', postLimiter, (req, res) => {
   const message = req.body.message;
@@ -211,7 +280,7 @@ app.post('/api/messages', postLimiter, (req, res) => {
     }
 
     db.run(
-      'INSERT INTO messages (message) VALUES (?);',
+      'INSERT INTO messages (message, created_at) VALUES (?, datetime(\'now\'));',
       [message],
       function (err) {
         if (err) {
@@ -227,7 +296,7 @@ app.post('/api/messages', postLimiter, (req, res) => {
 });
 
 // ============================
-// 📥 10. GET /api/messages
+// 📥 11. GET /api/messages
 // ============================
 app.get('/api/messages', getLimiter, (req, res) => {
   db.all(
@@ -246,9 +315,173 @@ app.get('/api/messages', getLimiter, (req, res) => {
   );
 });
 
+// ====================================================================
+// 🔐 ADMIN ENDPOINTS (Protected by JWT)
+// ====================================================================
+
 // ============================
-// ❗ 11. GLOBAL ERROR HANDLER
+// 🔑 12. POST /api/admin/login
 // ============================
+app.post('/api/admin/login', adminLoginLimiter, (req, res) => {
+  const { username, password } = req.body;
+
+  if (!username || !password) {
+    return res.status(400).json({ error: 'Username dan password diperlukan' });
+  }
+
+  // Plain string comparison (sesuai permintaan: no bcrypt)
+  if (username !== CONFIG.ADMIN_USERNAME || password !== CONFIG.ADMIN_PASSWORD) {
+    logger.warn({ ip: req.ip }, 'Percobaan login admin gagal');
+    return res.status(401).json({ error: 'Username atau password salah' });
+  }
+
+  // Generate JWT
+  const token = jwt.sign(
+    {
+      username: CONFIG.ADMIN_USERNAME,
+      role: 'admin',
+    },
+    CONFIG.JWT_SECRET,
+    { expiresIn: CONFIG.JWT_EXPIRES_IN }
+  );
+
+  logger.info({ ip: req.ip }, 'Admin login berhasil');
+
+  // Parse expiresIn ke detik untuk frontend
+  const expiresInSeconds = parseExpiresIn(CONFIG.JWT_EXPIRES_IN);
+
+  res.json({ token, expiresIn: expiresInSeconds });
+});
+
+// Helper: parse JWT expiresIn string ke detik
+function parseExpiresIn(str) {
+  if (typeof str === 'number') return str;
+  const match = str.match(/^(\d+)(h|m|s|d)$/);
+  if (!match) return 7200; // default 2 jam
+  const val = parseInt(match[1], 10);
+  const unit = match[2];
+  switch (unit) {
+    case 's': return val;
+    case 'm': return val * 60;
+    case 'h': return val * 3600;
+    case 'd': return val * 86400;
+    default: return 7200;
+  }
+}
+
+// ============================
+// 👤 13. GET /api/admin/me
+// ============================
+app.get('/api/admin/me', requireAdmin, (req, res) => {
+  res.json({
+    username: req.admin.username,
+    role: req.admin.role,
+  });
+});
+
+// ============================
+// 📋 14. GET /api/admin/messages
+// ============================
+app.get('/api/admin/messages', requireAdmin, (req, res) => {
+  const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+  const limit = Math.min(100, Math.max(1, parseInt(req.query.limit, 10) || 50));
+  const search = req.query.search ? req.query.search.trim() : '';
+  const offset = (page - 1) * limit;
+
+  // Hitung total message (dengan filter search jika ada)
+  let countQuery = 'SELECT COUNT(*) as total FROM messages';
+  let dataQuery = 'SELECT id, message, created_at FROM messages';
+  const params = [];
+  const searchParams = [];
+
+  if (search) {
+    const whereClause = ' WHERE message LIKE ?';
+    const searchParam = `%${search}%`;
+    countQuery += whereClause;
+    dataQuery += whereClause;
+    searchParams.push(searchParam);
+  }
+
+  dataQuery += ' ORDER BY id DESC LIMIT ? OFFSET ?';
+
+  // Ambil total count
+  db.get(countQuery, searchParams, (err, countRow) => {
+    if (err) {
+      logger.error(err, 'Gagal menghitung total messages (admin)');
+      return res.status(500).json({ error: 'Gagal mengambil data pesan' });
+    }
+
+    const total = countRow ? countRow.total : 0;
+    const totalPages = Math.ceil(total / limit);
+
+    // Ambil data halaman ini
+    const dataParams = [...searchParams, limit, offset];
+    db.all(dataQuery, dataParams, (err, rows) => {
+      if (err) {
+        logger.error(err, 'Gagal mengambil messages (admin)');
+        return res.status(500).json({ error: 'Gagal mengambil data pesan' });
+      }
+
+      // Tambah word_count ke setiap row
+      const messages = (rows || []).map(row => ({
+        id: row.id,
+        message: row.message,
+        word_count: countWords(row.message),
+        created_at: row.created_at || 'Unknown',
+      }));
+
+      res.json({
+        messages,
+        pagination: {
+          page,
+          limit,
+          total,
+          totalPages,
+          hasNext: page < totalPages,
+          hasPrev: page > 1,
+        },
+      });
+    });
+  });
+});
+
+// ============================
+// 🗑️ 15. DELETE /api/admin/messages/:id
+// ============================
+app.delete('/api/admin/messages/:id', requireAdmin, (req, res) => {
+  const id = parseInt(req.params.id, 10);
+
+  if (isNaN(id) || id < 1) {
+    return res.status(400).json({ error: 'ID pesan tidak valid' });
+  }
+
+  // Cek apakah pesan ada
+  db.get('SELECT id FROM messages WHERE id = ?', [id], (err, row) => {
+    if (err) {
+      logger.error(err, 'Gagal mencari pesan untuk dihapus');
+      return res.status(500).json({ error: 'Gagal menghapus pesan' });
+    }
+
+    if (!row) {
+      return res.status(404).json({ error: 'Pesan tidak ditemukan' });
+    }
+
+    // Hapus pesan
+    db.run('DELETE FROM messages WHERE id = ?', [id], function (err) {
+      if (err) {
+        logger.error(err, 'Gagal menghapus pesan');
+        return res.status(500).json({ error: 'Gagal menghapus pesan' });
+      }
+
+      logger.info({ id, admin: req.admin.username }, 'Pesan berhasil dihapus oleh admin');
+      res.json({ message: 'Pesan berhasil dihapus', id });
+    });
+  });
+});
+
+// ====================================================================
+// ❗ 16. GLOBAL ERROR HANDLER
+// ====================================================================
 app.use((err, req, res, next) => {
   if (err.type === 'entity.parse.failed') {
     return res.status(400).json({ error: 'Format JSON tidak valid' });
@@ -267,7 +500,7 @@ app.use((err, req, res, next) => {
 });
 
 // ============================
-// 🚫 12. 404 HANDLER (Custom Page)
+// 🚫 17. 404 HANDLER (Custom Page)
 // ============================
 app.use((req, res) => {
   // API routes — return JSON
@@ -280,16 +513,17 @@ app.use((req, res) => {
 });
 
 // ============================
-// 🚀 13. START SERVER
+// 🚀 18. START SERVER
 // ============================
 const server = app.listen(port, () => {
   logger.info(`🚀 Server berjalan pada port ${port} (${CONFIG.NODE_ENV})`);
   logger.info(`   🌐 http://localhost:${port}`);
   logger.info(`   💓 Health check: http://localhost:${port}/api/health`);
+  logger.info(`   🔐 Admin panel: http://localhost:${port}/admin.html`);
 });
 
 // ============================
-// 🔄 14. GRACEFUL SHUTDOWN
+// 🔄 19. GRACEFUL SHUTDOWN
 // ============================
 function shutdown(signal) {
   logger.info(`${signal} received — shutting down gracefully...`);

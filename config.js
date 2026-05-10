@@ -52,11 +52,23 @@ const CONFIG = {
   GET_RATE_LIMIT_WINDOW_MS: parseInt(safeEnv('GET_RATE_LIMIT_WINDOW_MS', '60000'), 10) || 60000,      // 1 menit
   GET_RATE_LIMIT_MAX: parseInt(safeEnv('GET_RATE_LIMIT_MAX', '30'), 10) || 30,                      // maks 30 GET per window
 
+  // --- Admin Login Rate Limiting ---
+  ADMIN_LOGIN_RATE_LIMIT_WINDOW_MS: parseInt(safeEnv('ADMIN_LOGIN_RATE_LIMIT_WINDOW_MS', '900000'), 10) || 900000, // 15 menit
+  ADMIN_LOGIN_RATE_LIMIT_MAX: parseInt(safeEnv('ADMIN_LOGIN_RATE_LIMIT_MAX', '5'), 10) || 5,                       // maks 5 percobaan
+
   // --- Request Timeout ---
   REQUEST_TIMEOUT_MS: parseInt(safeEnv('REQUEST_TIMEOUT_MS', '10000'), 10) || 10000,                   // 10 detik
 
   // --- Payload ---
   MAX_PAYLOAD_SIZE: safeEnv('MAX_PAYLOAD_SIZE', '100kb'),
+
+  // --- Admin Credentials ---
+  ADMIN_USERNAME: safeEnv('ADMIN_USERNAME', 'admin'),
+  ADMIN_PASSWORD: safeEnv('ADMIN_PASSWORD', ''),
+
+  // --- JWT ---
+  JWT_SECRET: safeEnv('JWT_SECRET', 'change-me-in-production'),
+  JWT_EXPIRES_IN: safeEnv('JWT_EXPIRES_IN', '2h'),
 };
 
 // Ekspor untuk Node.js (Server.js)
