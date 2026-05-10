@@ -27,6 +27,28 @@ const successNotification = document.getElementById('success-notification');
 // agar fokus bisa dikembalikan saat modal ditutup (a11y penting!)
 let lastFocusedElement = null;
 
+// === AUTO-REFRESH ===
+// Polling berkala untuk mengecek pesan baru otomatis
+const AUTO_REFRESH_INTERVAL_MS = 15000; // 15 detik
+let autoRefreshTimerId = null;
+
+function startAutoRefresh() {
+  stopAutoRefresh(); // Pastikan tidak ada timer duplikat
+  autoRefreshTimerId = setInterval(function () {
+    // Hanya fetch jika modal tidak terbuka (user sedang di reading state)
+    if (writeModal.classList.contains('hidden')) {
+      fetchRandomMessage();
+    }
+  }, AUTO_REFRESH_INTERVAL_MS);
+}
+
+function stopAutoRefresh() {
+  if (autoRefreshTimerId !== null) {
+    clearInterval(autoRefreshTimerId);
+    autoRefreshTimerId = null;
+  }
+}
+
 // === FOCUS TRAP untuk modal ===
 // Daftar elemen focusable di dalam modal
 function getModalFocusableElements() {
@@ -207,6 +229,9 @@ function insertFormatting(openTag, closeTag) {
 
 // === Open Writing Modal ===
 function openWriteModal() {
+  // Hentikan auto-refresh saat modal terbuka
+  stopAutoRefresh();
+
   // Simpan elemen yang sedang fokus
   lastFocusedElement = document.activeElement;
 
@@ -249,6 +274,9 @@ function closeWriteModal() {
       lastFocusedElement.focus();
     }
     lastFocusedElement = null;
+
+    // Mulai auto-refresh lagi setelah modal ditutup
+    startAutoRefresh();
   }, 400);
 }
 
@@ -350,9 +378,10 @@ async function fetchRandomMessage() {
   }
 }
 
-// === Event: Auto-fetch on Page Load ===
+// === Event: Auto-fetch on Page Load + Start Auto-Refresh ===
 window.addEventListener('load', function () {
   fetchRandomMessage();
+  startAutoRefresh();
 });
 
 // === Event: Find Another Message ===

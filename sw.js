@@ -6,8 +6,8 @@ const CACHE_NAME = 'message-in-a-bottle-v1';
 // Aset yang akan di-cache saat service worker diinstall
 const PRECACHE_URLS = [
   '/',
-  '/Index.html',
-  '/Script.js',
+  '/index.html',
+  '/script.js',
   '/config.js',
   '/public/manifest.json',
   '/public/404.html',
