@@ -1,7 +1,51 @@
+# === Node.js ===
 node_modules/
-.env*
-logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# === Environment Variables ===
+# File .env* mengandung credentials (database, admin, JWT)
+# Jangan pernah commit ke GitHub!
+.env
+.env.*
+!.env.example
+
+# === Database ===
+# SQLite database files (auto-generated saat server jalan)
 *.db
 *.db-wal
 *.db-shm
+*.sqlite
+*.sqlite3
+
+# === Logs ===
+logs/
+*.log
+
+# === OS Files ===
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# === IDE / Editor ===
+.idea/
+*.swp
+*.swo
+*~
+.vscode/
+.nyc_output/
+
+# === Vercel ===
+.vercel/
+
+# === PM2 (Process Manager) ===
+pm2-*.log
+ecosystem.config.js
+
+# === Testing ===
+coverage/

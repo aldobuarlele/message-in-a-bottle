@@ -1,5 +1,4 @@
 const express = require('express');
-const sqlite3 = require('sqlite3').verbose();
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const jwt = require('jsonwebtoken');
@@ -14,12 +13,70 @@ const port = CONFIG.PORT;
 const pino = require('pino');
 const logger = pino({
   level: CONFIG.LOG_LEVEL,
-  // Di development: format human-readable via pino-pretty
-  // Di production: JSON streaming (otomatis terstruktur, cocok untuk log aggregator)
   transport: CONFIG.NODE_ENV !== 'production'
     ? { target: 'pino-pretty', options: { colorize: true, translateTime: 'HH:MM:ss' } }
     : undefined,
 });
+
+// ============================
+// 🗄️ DATABASE SELECTOR
+// ============================
+// Production (Vercel) → PostgreSQL via db.js
+// Development (lokal) → SQLite
+// ============================
+const USE_POSTGRES = !!(process.env.DATABASE_URL);
+
+let db = null; // Untuk SQLite
+let pgDb = null; // Untuk PostgreSQL
+
+if (USE_POSTGRES) {
+  pgDb = require('./db.js');
+  logger.info('[DB] Using PostgreSQL');
+} else {
+  const sqlite3 = require('sqlite3').verbose();
+  db = new sqlite3.Database('./messages.db');
+
+  db.serialize(function () {
+    db.run(`
+      CREATE TABLE IF NOT EXISTS messages (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        message TEXT NOT NULL
+      );
+    `);
+
+    db.all("PRAGMA table_info(messages);", (err, columns) => {
+      if (err) {
+        logger.error(err, 'Gagal membaca schema tabel');
+        return;
+      }
+
+      const hasCreatedAt = columns.some(col => col.name === 'created_at');
+      if (!hasCreatedAt) {
+        db.run("ALTER TABLE messages ADD COLUMN created_at TEXT;", (alterErr) => {
+          if (alterErr) {
+            logger.error(alterErr, 'Gagal migrasi created_at');
+          } else {
+            logger.info('Migrasi: kolom created_at berhasil ditambahkan');
+            db.run("UPDATE messages SET created_at = datetime('now') WHERE created_at IS NULL;", (updateErr) => {
+              if (updateErr) {
+                logger.error(updateErr, 'Gagal mengisi created_at untuk data lama');
+              } else {
+                logger.info('Migrasi: created_at diisi untuk semua data lama');
+              }
+            });
+          }
+        });
+      } else {
+        logger.info('Kolom created_at sudah ada — tidak perlu migrasi');
+      }
+    });
+
+    db.run('PRAGMA journal_mode=WAL;');
+    db.run('PRAGMA synchronous=NORMAL;');
+
+    logger.info('Database initialized (SQLite)');
+  });
+}
 
 // ============================
 // 🛡️ 1. SECURITY HEADERS (Helmet)
@@ -94,61 +151,7 @@ app.use((req, res, next) => {
 });
 
 // ============================
-// 🗄️ 5. DATABASE SETUP
-// ============================
-const db = new sqlite3.Database('./messages.db');
-
-db.serialize(function () {
-  db.run(`
-    CREATE TABLE IF NOT EXISTS messages (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      message TEXT NOT NULL
-    );
-  `);
-
-  // === Migrasi: tambah kolom created_at jika belum ada ===
-  // SQLite tidak memiliki IF NOT EXISTS untuk ALTER TABLE,
-  // jadi kita cek pragma table_info terlebih dahulu.
-  db.all("PRAGMA table_info(messages);", (err, columns) => {
-    if (err) {
-      logger.error(err, 'Gagal membaca schema tabel');
-      return;
-    }
-
-    const hasCreatedAt = columns.some(col => col.name === 'created_at');
-    if (!hasCreatedAt) {
-      // SQLite versi lama tidak mendukung DEFAULT dengan fungsi datetime('now')
-      // pada ALTER TABLE. Jadi kita tambah kolom dulu tanpa default,
-      // lalu isi manual dengan UPDATE.
-      db.run("ALTER TABLE messages ADD COLUMN created_at TEXT;", (alterErr) => {
-        if (alterErr) {
-          logger.error(alterErr, 'Gagal migrasi created_at');
-        } else {
-          logger.info('Migrasi: kolom created_at berhasil ditambahkan');
-
-          // Set created_at untuk baris yang sudah ada ke timestamp sekarang
-          db.run("UPDATE messages SET created_at = datetime('now') WHERE created_at IS NULL;", (updateErr) => {
-            if (updateErr) {
-              logger.error(updateErr, 'Gagal mengisi created_at untuk data lama');
-            } else {
-              logger.info('Migrasi: created_at diisi untuk semua data lama');
-            }
-          });
-        }
-      });
-    } else {
-      logger.info('Kolom created_at sudah ada — tidak perlu migrasi');
-    }
-  });
-
-  db.run('PRAGMA journal_mode=WAL;');
-  db.run('PRAGMA synchronous=NORMAL;');
-
-  logger.info('Database initialized (SQLite)');
-});
-
-// ============================
-// 📦 6. RATE LIMITING
+// 📦 5. RATE LIMITING
 // ============================
 const postLimiter = rateLimit({
   windowMs: CONFIG.POST_RATE_LIMIT_WINDOW_MS,
@@ -175,7 +178,7 @@ const adminLoginLimiter = rateLimit({
 });
 
 // ============================
-// 🛡️ 7. REQUIRE ADMIN MIDDLEWARE (JWT)
+// 🛡️ 6. REQUIRE ADMIN MIDDLEWARE (JWT)
 // ============================
 function requireAdmin(req, res, next) {
   const authHeader = req.headers.authorization;
@@ -199,7 +202,7 @@ function requireAdmin(req, res, next) {
 }
 
 // ============================
-// 🛠️ 8. HELPER FUNCTIONS
+// 🛠️ 7. HELPER FUNCTIONS
 // ============================
 function countWords(text) {
   const trimmed = text.trim();
@@ -211,28 +214,8 @@ function isValidString(value) {
   return typeof value === 'string' && value.trim().length > 0;
 }
 
-function enforceStorageLimit(callback) {
-  db.get('SELECT COUNT(*) as count FROM messages', (err, row) => {
-    if (err) {
-      logger.error(err, 'Gagal cek count database');
-      return callback(err);
-    }
-    if (row.count > CONFIG.MAX_MESSAGES) {
-      const excess = row.count - CONFIG.MAX_MESSAGES;
-      db.run(
-        'DELETE FROM messages WHERE id IN (SELECT id FROM messages ORDER BY id ASC LIMIT ?)',
-        [excess],
-        callback
-      );
-      logger.info(`Storage limit enforced: removed ${excess} oldest message(s)`);
-    } else {
-      callback(null);
-    }
-  });
-}
-
 // ============================
-// 💓 9. HEALTH CHECK ENDPOINT
+// 💓 8. HEALTH CHECK ENDPOINT
 // ============================
 app.get('/api/health', (req, res) => {
   res.json({
@@ -240,13 +223,14 @@ app.get('/api/health', (req, res) => {
     uptime: process.uptime(),
     timestamp: Date.now(),
     environment: CONFIG.NODE_ENV,
+    database: USE_POSTGRES ? 'postgresql' : 'sqlite',
   });
 });
 
 // ============================
-// 📩 10. POST /api/messages
+// 📩 9. POST /api/messages
 // ============================
-app.post('/api/messages', postLimiter, (req, res) => {
+app.post('/api/messages', postLimiter, async (req, res) => {
   const message = req.body.message;
 
   if (!isValidString(message)) {
@@ -274,45 +258,86 @@ app.post('/api/messages', postLimiter, (req, res) => {
     return;
   }
 
-  enforceStorageLimit((err) => {
-    if (err) {
-      logger.error(err, 'Gagal enforce storage limit');
-    }
-
-    db.run(
-      'INSERT INTO messages (message, created_at) VALUES (?, datetime(\'now\'));',
-      [message],
-      function (err) {
-        if (err) {
-          logger.error(err, 'Gagal menyimpan pesan');
-          res.status(500).json({ error: 'Gagal menyimpan pesan' });
-        } else {
-          logger.info({ id: this.lastID, wordCount }, 'Pesan baru berhasil disimpan');
-          res.json({ message: 'Pesan berhasil dilempar ke laut!' });
-        }
+  try {
+    if (USE_POSTGRES) {
+      // PostgreSQL path
+      const total = await pgDb.countMessages();
+      if (total > CONFIG.MAX_MESSAGES) {
+        const excess = total - CONFIG.MAX_MESSAGES;
+        await pgDb.deleteOldestMessages(excess);
+        logger.info(`Storage limit enforced: removed ${excess} oldest message(s)`);
       }
-    );
-  });
+
+      const result = await pgDb.insertMessage(message);
+      logger.info({ id: result.id, wordCount }, 'Pesan baru berhasil disimpan');
+      res.json({ message: 'Pesan berhasil dilempar ke laut!' });
+    } else {
+      // SQLite path
+      db.get('SELECT COUNT(*) as count FROM messages', (err, row) => {
+        if (err) {
+          logger.error(err, 'Gagal cek count database');
+        } else if (row.count > CONFIG.MAX_MESSAGES) {
+          const excess = row.count - CONFIG.MAX_MESSAGES;
+          db.run(
+            'DELETE FROM messages WHERE id IN (SELECT id FROM messages ORDER BY id ASC LIMIT ?)',
+            [excess]
+          );
+          logger.info(`Storage limit enforced: removed ${excess} oldest message(s)`);
+        }
+
+        db.run(
+          'INSERT INTO messages (message, created_at) VALUES (?, datetime(\'now\'));',
+          [message],
+          function (err) {
+            if (err) {
+              logger.error(err, 'Gagal menyimpan pesan');
+              res.status(500).json({ error: 'Gagal menyimpan pesan' });
+            } else {
+              logger.info({ id: this.lastID, wordCount }, 'Pesan baru berhasil disimpan');
+              res.json({ message: 'Pesan berhasil dilempar ke laut!' });
+            }
+          }
+        );
+      });
+    }
+  } catch (err) {
+    logger.error(err, 'Gagal menyimpan pesan');
+    res.status(500).json({ error: 'Gagal menyimpan pesan' });
+  }
 });
 
 // ============================
-// 📥 11. GET /api/messages
+// 📥 10. GET /api/messages
 // ============================
-app.get('/api/messages', getLimiter, (req, res) => {
-  db.all(
-    'SELECT message FROM messages ORDER BY RANDOM() LIMIT 1;',
-    [],
-    (err, rows) => {
-      if (err) {
-        logger.error(err, 'Gagal mengambil pesan');
-        res.status(500).json({ error: 'Gagal mengambil pesan' });
-      } else if (rows.length === 0) {
+app.get('/api/messages', getLimiter, async (req, res) => {
+  try {
+    if (USE_POSTGRES) {
+      const rows = await pgDb.getRandomMessage();
+      if (rows.length === 0) {
         res.json({ message: 'Tidak ada pesan dalam botol!' });
       } else {
         res.json({ message: rows[0].message });
       }
+    } else {
+      db.all(
+        'SELECT message FROM messages ORDER BY RANDOM() LIMIT 1;',
+        [],
+        (err, rows) => {
+          if (err) {
+            logger.error(err, 'Gagal mengambil pesan');
+            res.status(500).json({ error: 'Gagal mengambil pesan' });
+          } else if (rows.length === 0) {
+            res.json({ message: 'Tidak ada pesan dalam botol!' });
+          } else {
+            res.json({ message: rows[0].message });
+          }
+        }
+      );
     }
-  );
+  } catch (err) {
+    logger.error(err, 'Gagal mengambil pesan');
+    res.status(500).json({ error: 'Gagal mengambil pesan' });
+  }
 });
 
 // ====================================================================
@@ -320,7 +345,7 @@ app.get('/api/messages', getLimiter, (req, res) => {
 // ====================================================================
 
 // ============================
-// 🔑 12. POST /api/admin/login
+// 🔑 11. POST /api/admin/login
 // ============================
 app.post('/api/admin/login', adminLoginLimiter, (req, res) => {
   const { username, password } = req.body;
@@ -329,13 +354,11 @@ app.post('/api/admin/login', adminLoginLimiter, (req, res) => {
     return res.status(400).json({ error: 'Username dan password diperlukan' });
   }
 
-  // Plain string comparison (sesuai permintaan: no bcrypt)
   if (username !== CONFIG.ADMIN_USERNAME || password !== CONFIG.ADMIN_PASSWORD) {
     logger.warn({ ip: req.ip }, 'Percobaan login admin gagal');
     return res.status(401).json({ error: 'Username atau password salah' });
   }
 
-  // Generate JWT
   const token = jwt.sign(
     {
       username: CONFIG.ADMIN_USERNAME,
@@ -347,17 +370,15 @@ app.post('/api/admin/login', adminLoginLimiter, (req, res) => {
 
   logger.info({ ip: req.ip }, 'Admin login berhasil');
 
-  // Parse expiresIn ke detik untuk frontend
   const expiresInSeconds = parseExpiresIn(CONFIG.JWT_EXPIRES_IN);
 
   res.json({ token, expiresIn: expiresInSeconds });
 });
 
-// Helper: parse JWT expiresIn string ke detik
 function parseExpiresIn(str) {
   if (typeof str === 'number') return str;
   const match = str.match(/^(\d+)(h|m|s|d)$/);
-  if (!match) return 7200; // default 2 jam
+  if (!match) return 7200;
   const val = parseInt(match[1], 10);
   const unit = match[2];
   switch (unit) {
@@ -370,7 +391,7 @@ function parseExpiresIn(str) {
 }
 
 // ============================
-// 👤 13. GET /api/admin/me
+// 👤 12. GET /api/admin/me
 // ============================
 app.get('/api/admin/me', requireAdmin, (req, res) => {
   res.json({
@@ -380,107 +401,134 @@ app.get('/api/admin/me', requireAdmin, (req, res) => {
 });
 
 // ============================
-// 📋 14. GET /api/admin/messages
+// 📋 13. GET /api/admin/messages
 // ============================
-app.get('/api/admin/messages', requireAdmin, (req, res) => {
+app.get('/api/admin/messages', requireAdmin, async (req, res) => {
   const page = Math.max(1, parseInt(req.query.page, 10) || 1);
   const limit = Math.min(100, Math.max(1, parseInt(req.query.limit, 10) || 50));
   const search = req.query.search ? req.query.search.trim() : '';
-  const offset = (page - 1) * limit;
 
-  // Hitung total message (dengan filter search jika ada)
-  let countQuery = 'SELECT COUNT(*) as total FROM messages';
-  let dataQuery = 'SELECT id, message, created_at FROM messages';
-  const params = [];
-  const searchParams = [];
-
-  if (search) {
-    const whereClause = ' WHERE message LIKE ?';
-    const searchParam = `%${search}%`;
-    countQuery += whereClause;
-    dataQuery += whereClause;
-    searchParams.push(searchParam);
-  }
-
-  dataQuery += ' ORDER BY id DESC LIMIT ? OFFSET ?';
-
-  // Ambil total count
-  db.get(countQuery, searchParams, (err, countRow) => {
-    if (err) {
-      logger.error(err, 'Gagal menghitung total messages (admin)');
-      return res.status(500).json({ error: 'Gagal mengambil data pesan' });
-    }
-
-    const total = countRow ? countRow.total : 0;
-    const totalPages = Math.ceil(total / limit);
-
-    // Ambil data halaman ini
-    const dataParams = [...searchParams, limit, offset];
-    db.all(dataQuery, dataParams, (err, rows) => {
-      if (err) {
-        logger.error(err, 'Gagal mengambil messages (admin)');
-        return res.status(500).json({ error: 'Gagal mengambil data pesan' });
-      }
-
-      // Tambah word_count ke setiap row
-      const messages = (rows || []).map(row => ({
+  try {
+    if (USE_POSTGRES) {
+      const result = await pgDb.getMessagesAdmin({ page, limit, search });
+      // Add word_count
+      result.messages = result.messages.map(row => ({
         id: row.id,
         message: row.message,
         word_count: countWords(row.message),
         created_at: row.created_at || 'Unknown',
       }));
+      res.json(result);
+    } else {
+      const offset = (page - 1) * limit;
 
-      res.json({
-        messages,
-        pagination: {
-          page,
-          limit,
-          total,
-          totalPages,
-          hasNext: page < totalPages,
-          hasPrev: page > 1,
-        },
+      let countQuery = 'SELECT COUNT(*) as total FROM messages';
+      let dataQuery = 'SELECT id, message, created_at FROM messages';
+      const searchParams = [];
+
+      if (search) {
+        const whereClause = ' WHERE message LIKE ?';
+        const searchParam = `%${search}%`;
+        countQuery += whereClause;
+        dataQuery += whereClause;
+        searchParams.push(searchParam);
+      }
+
+      dataQuery += ' ORDER BY id DESC LIMIT ? OFFSET ?';
+
+      db.get(countQuery, searchParams, (err, countRow) => {
+        if (err) {
+          logger.error(err, 'Gagal menghitung total messages (admin)');
+          return res.status(500).json({ error: 'Gagal mengambil data pesan' });
+        }
+
+        const total = countRow ? countRow.total : 0;
+        const totalPages = Math.ceil(total / limit);
+
+        const dataParams = [...searchParams, limit, offset];
+        db.all(dataQuery, dataParams, (err, rows) => {
+          if (err) {
+            logger.error(err, 'Gagal mengambil messages (admin)');
+            return res.status(500).json({ error: 'Gagal mengambil data pesan' });
+          }
+
+          const messages = (rows || []).map(row => ({
+            id: row.id,
+            message: row.message,
+            word_count: countWords(row.message),
+            created_at: row.created_at || 'Unknown',
+          }));
+
+          res.json({
+            messages,
+            pagination: {
+              page,
+              limit,
+              total,
+              totalPages,
+              hasNext: page < totalPages,
+              hasPrev: page > 1,
+            },
+          });
+        });
       });
-    });
-  });
+    }
+  } catch (err) {
+    logger.error(err, 'Gagal mengambil data pesan (admin)');
+    res.status(500).json({ error: 'Gagal mengambil data pesan' });
+  }
 });
 
 // ============================
-// 🗑️ 15. DELETE /api/admin/messages/:id
+// 🗑️ 14. DELETE /api/admin/messages/:id
 // ============================
-app.delete('/api/admin/messages/:id', requireAdmin, (req, res) => {
+app.delete('/api/admin/messages/:id', requireAdmin, async (req, res) => {
   const id = parseInt(req.params.id, 10);
 
   if (isNaN(id) || id < 1) {
     return res.status(400).json({ error: 'ID pesan tidak valid' });
   }
 
-  // Cek apakah pesan ada
-  db.get('SELECT id FROM messages WHERE id = ?', [id], (err, row) => {
-    if (err) {
-      logger.error(err, 'Gagal mencari pesan untuk dihapus');
-      return res.status(500).json({ error: 'Gagal menghapus pesan' });
-    }
-
-    if (!row) {
-      return res.status(404).json({ error: 'Pesan tidak ditemukan' });
-    }
-
-    // Hapus pesan
-    db.run('DELETE FROM messages WHERE id = ?', [id], function (err) {
-      if (err) {
-        logger.error(err, 'Gagal menghapus pesan');
-        return res.status(500).json({ error: 'Gagal menghapus pesan' });
+  try {
+    if (USE_POSTGRES) {
+      const exists = await pgDb.getMessageById(id);
+      if (!exists) {
+        return res.status(404).json({ error: 'Pesan tidak ditemukan' });
       }
 
+      await pgDb.deleteMessageById(id);
       logger.info({ id, admin: req.admin.username }, 'Pesan berhasil dihapus oleh admin');
       res.json({ message: 'Pesan berhasil dihapus', id });
-    });
-  });
+    } else {
+      db.get('SELECT id FROM messages WHERE id = ?', [id], (err, row) => {
+        if (err) {
+          logger.error(err, 'Gagal mencari pesan untuk dihapus');
+          return res.status(500).json({ error: 'Gagal menghapus pesan' });
+        }
+
+        if (!row) {
+          return res.status(404).json({ error: 'Pesan tidak ditemukan' });
+        }
+
+        db.run('DELETE FROM messages WHERE id = ?', [id], function (err) {
+          if (err) {
+            logger.error(err, 'Gagal menghapus pesan');
+            return res.status(500).json({ error: 'Gagal menghapus pesan' });
+          }
+
+          logger.info({ id, admin: req.admin.username }, 'Pesan berhasil dihapus oleh admin');
+          res.json({ message: 'Pesan berhasil dihapus', id });
+        });
+      });
+    }
+  } catch (err) {
+    logger.error(err, 'Gagal menghapus pesan');
+    res.status(500).json({ error: 'Gagal menghapus pesan' });
+  }
 });
 
 // ====================================================================
-// ❗ 16. GLOBAL ERROR HANDLER
+// ❗ 15. GLOBAL ERROR HANDLER
 // ====================================================================
 app.use((err, req, res, next) => {
   if (err.type === 'entity.parse.failed') {
@@ -500,51 +548,68 @@ app.use((err, req, res, next) => {
 });
 
 // ============================
-// 🚫 17. 404 HANDLER (Custom Page)
+// 🚫 16. 404 HANDLER (Custom Page)
 // ============================
 app.use((req, res) => {
-  // API routes — return JSON
   if (req.path.startsWith('/api/')) {
     return res.status(404).json({ error: 'Endpoint tidak ditemukan' });
   }
 
-  // Static pages — serve custom 404
   res.status(404).sendFile(path.join(__dirname, 'public', '404.html'));
 });
 
 // ============================
-// 🚀 18. START SERVER
+// 🚀 17. START SERVER
 // ============================
-const server = app.listen(port, () => {
-  logger.info(`🚀 Server berjalan pada port ${port} (${CONFIG.NODE_ENV})`);
-  logger.info(`   🌐 http://localhost:${port}`);
-  logger.info(`   💓 Health check: http://localhost:${port}/api/health`);
-  logger.info(`   🔐 Admin panel: http://localhost:${port}/admin.html`);
-});
+async function startServer() {
+  if (USE_POSTGRES) {
+    try {
+      await pgDb.initDatabase();
+      logger.info('PostgreSQL database initialized');
+    } catch (err) {
+      logger.error(err, 'Gagal inisialisasi PostgreSQL');
+      process.exit(1);
+    }
+  }
 
-// ============================
-// 🔄 19. GRACEFUL SHUTDOWN
-// ============================
-function shutdown(signal) {
-  logger.info(`${signal} received — shutting down gracefully...`);
-
-  server.close(() => {
-    db.close((err) => {
-      if (err) {
-        logger.error(err, 'Error closing database');
-        process.exit(1);
-      }
-      logger.info('Database connection closed. Goodbye! 👋');
-      process.exit(0);
-    });
+  const server = app.listen(port, () => {
+    logger.info(`🚀 Server berjalan pada port ${port} (${CONFIG.NODE_ENV})`);
+    logger.info(`   🌐 http://localhost:${port}`);
+    logger.info(`   💓 Health check: http://localhost:${port}/api/health`);
+    logger.info(`   🔐 Admin panel: http://localhost:${port}/admin.html`);
+    logger.info(`   🗄️  Database: ${USE_POSTGRES ? 'PostgreSQL' : 'SQLite'}`);
   });
 
-  // Force shutdown after 5 seconds if graceful fails
-  setTimeout(() => {
-    logger.error('Forced shutdown after timeout');
-    process.exit(1);
-  }, 5000).unref();
+  // ============================
+  // 🔄 18. GRACEFUL SHUTDOWN
+  // ============================
+  function shutdown(signal) {
+    logger.info(`${signal} received — shutting down gracefully...`);
+
+    server.close(() => {
+      if (!USE_POSTGRES && db) {
+        db.close((err) => {
+          if (err) {
+            logger.error(err, 'Error closing database');
+            process.exit(1);
+          }
+          logger.info('Database connection closed. Goodbye! 👋');
+          process.exit(0);
+        });
+      } else {
+        logger.info('Goodbye! 👋');
+        process.exit(0);
+      }
+    });
+
+    setTimeout(() => {
+      logger.error('Forced shutdown after timeout');
+      process.exit(1);
+    }, 5000).unref();
+  }
+
+  process.on('SIGTERM', () => shutdown('SIGTERM'));
+  process.on('SIGINT', () => shutdown('SIGINT'));
 }
 
-process.on('SIGTERM', () => shutdown('SIGTERM'));
-process.on('SIGINT', () => shutdown('SIGINT'));
+startServer();
