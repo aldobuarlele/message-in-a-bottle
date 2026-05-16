@@ -18,6 +18,11 @@ yarn-error.log*
 *.db-shm
 *.sqlite
 *.sqlite3
+*.sql
+
+# === Migration / SQL Dumps ===
+migrate.sql
+migrate*.sql
 
 # === Logs ===
 logs/
@@ -39,6 +44,10 @@ Thumbs.db
 *~
 .vscode/
 .nyc_output/
+
+# === AI / Personal Config ===
+.clineignore
+task_progress.md
 
 # === Vercel ===
 .vercel/
