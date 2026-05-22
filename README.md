@@ -54,24 +54,6 @@
 
 ---
 
-## 📸 Visual Preview
-
-> _Tangkapan layar di bawah adalah placeholder. Ganti dengan URL screenshot asli dari aplikasi yang sedang berjalan._
-
-| Reading State (Tampilan Utama) | Writing Modal (Menulis Pesan) |
-|:---:|:---:|
-| ![Reading State](https://via.placeholder.com/400x500/1e293b/94a3b8?text=Reading+State+-+Glassmorphism+UI) | ![Writing Modal](https://via.placeholder.com/400x500/1e293b/94a3b8?text=Writing+Modal+-+Character+Counter) |
-| Tampilan utama dengan botol, pesan acak, dan tombol navigasi — dibalut efek <code>backdrop-blur</code> kaca. | Modal transparan dengan textarea, <strong>real-time character counter</strong>, dan tombol aksi gradien. |
-
-| Loading State | Empty State |
-|:---:|:---:|
-| ![Loading State](https://via.placeholder.com/400x200/1e293b/94a3b8?text=Loading+State+-+Animasi+Ping) | ![Empty State](https://via.placeholder.com/400x200/1e293b/94a3b8?text=Empty+State+-+Lautan+Sepi) |
-| Animasi <code>ping</code> dan teks "Mencari botol di lautan..." saat fetch. | Muncul saat database kosong — mengajak pengguna jadi yang pertama. |
-
-
-
----
-
 ## 🛠️ Tech Stack
 
 ### Frontend _(via CDN — Zero Build Step)_
@@ -93,6 +75,23 @@
 | **Express 4.18** | HTTP server & routing | 1 file — `server.js`, ~56 baris, minimalis |
 | **SQLite3 5.x** | Database file-based | 1 file — `messages.db`, auto-generated |
 | **SQLite** | Query | Prepared statements, `ORDER BY RANDOM() LIMIT 1` untuk random picking |
+
+---
+
+## 📸 Visual Preview
+
+> _Tangkapan layar di bawah adalah placeholder. Ganti dengan URL screenshot asli dari aplikasi yang sedang berjalan._
+
+| Reading State (Tampilan Utama) | Writing Modal (Menulis Pesan) |
+|:---:|:---:|
+| ![Reading State](https://via.placeholder.com/400x500/1e293b/94a3b8?text=Reading+State+-+Glassmorphism+UI) | ![Writing Modal](https://via.placeholder.com/400x500/1e293b/94a3b8?text=Writing+Modal+-+Character+Counter) |
+| Tampilan utama dengan botol, pesan acak, dan tombol navigasi — dibalut efek <code>backdrop-blur</code> kaca. | Modal transparan dengan textarea, <strong>real-time character counter</strong>, dan tombol aksi gradien. |
+
+| Loading State | Empty State |
+|:---:|:---:|
+| ![Loading State](https://via.placeholder.com/400x200/1e293b/94a3b8?text=Loading+State+-+Animasi+Ping) | ![Empty State](https://via.placeholder.com/400x200/1e293b/94a3b8?text=Empty+State+-+Lautan+Sepi) |
+| Animasi <code>ping</code> dan teks "Mencari botol di lautan..." saat fetch. | Muncul saat database kosong — mengajak pengguna jadi yang pertama. |
+
 
 ---
 
